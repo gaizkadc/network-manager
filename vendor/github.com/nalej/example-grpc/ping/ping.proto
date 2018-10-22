@@ -1,0 +1,23 @@
+//
+// Copyright (C) 2018 Daisho Group - All Rights Reserved
+//
+
+syntax = "proto3";
+
+package ping;
+
+service Ping {
+    // Ping the server a return a msg containing the request number.
+    rpc Ping(PingRequest) returns (PingResponse) {}
+}
+
+// PingRequest defines the message sent by the client with a request number.
+message PingRequest {
+    int32 request_number = 1;
+}
+
+// PingResponse defines the message sent by the server with a response message.
+message PingResponse {
+    string msg = 1;
+}
+

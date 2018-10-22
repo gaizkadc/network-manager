@@ -1,0 +1,11 @@
+[[constraint]]
+    name="github.com/rs/zerolog"
+    version="v1.8.0"
+
+[[constraint]]
+    name="github.com/spf13/cobra"
+    version="v0.0.3"
+
+[[constraint]]
+    name="github.com/nalej/grpc-ping-go"
+    version="v0.0.8"
