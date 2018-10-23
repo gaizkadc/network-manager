@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var config = cfg.Config{}
+var config = server.Config{}
 
 var runCmd = &cobra.Command{
 	Use:   "run",
@@ -21,12 +21,12 @@ var runCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		SetupLogging()
 		log.Info().Msg("Launching API!")
-		s := server.NewService(config)
-		s.Run()
+		s := server.NewServer(config)
+		s.Launch()
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(apiCmd)
-	apiCmd.Flags().IntVar(&portServer, "portServer", 8000, "Port to launch the gRPC server")
+	rootCmd.AddCommand(runCmd)
+	runCmd.Flags().IntVar(&config.Port, "port", 8000, "Port to launch the gRPC server")
 }

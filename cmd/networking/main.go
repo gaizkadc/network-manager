@@ -5,7 +5,7 @@
 package main
 
 import (
-	"github.com/nalej/networking/cmd/ping/commands"
+	"github.com/nalej/networking/cmd/networking/commands"
 )
 
 func main() {

@@ -41,6 +41,14 @@
   revision = "7d9716fa3acc13c26166550c95929bec25c090fa"
 
 [[projects]]
+  digest = "1:05c1a54c80e2d88b6af8f6e3af68ded6ef7f5aea9a28873fb68edc72ea798581"
+  name = "github.com/nalej/grpc-utils"
+  packages = ["pkg/tools"]
+  pruneopts = ""
+  revision = "5dd4662c03100806b57763212966a72e0c4b85e5"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:8df8bf0743bd632dcae85b2d9bc46d587146f39ca596d5e5c58d2ae2b165519e"
   name = "github.com/rs/zerolog"
   packages = [
@@ -167,6 +175,7 @@
   input-imports = [
     "github.com/nalej/derrors",
     "github.com/nalej/example-grpc/ping",
+    "github.com/nalej/grpc-utils/pkg/tools",
     "github.com/rs/zerolog",
     "github.com/rs/zerolog/log",
     "github.com/spf13/cobra",
