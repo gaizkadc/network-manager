@@ -52,14 +52,74 @@ func TestNewGenericError(t *testing.T) {
 	assertTrue(t, err != nil, "Expecting new error")
 }
 
-func TestNewEntityError(t *testing.T) {
-	var err Error = NewEntityError("entity", "msg")
+func TestNewCanceledError(t *testing.T) {
+	var err Error = NewCanceledError("msg")
 	assertTrue(t, err != nil, "Expecting new error")
 }
 
-func TestNewOperationError(t *testing.T) {
-	var err Error = NewOperationError("msg").WithParams("param1")
-	assertTrue(t, err != nil, "expecting new error")
+func TestNewInvalidArgumentError(t *testing.T) {
+	var err Error = NewInvalidArgumentError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewDeadlineExceededError(t *testing.T) {
+	var err Error = NewDeadlineExceededError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewNotFoundError(t *testing.T) {
+	var err Error = NewNotFoundError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewAlreadyExistsError(t *testing.T) {
+	var err Error = NewAlreadyExistsError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewPermissionDeniedError(t *testing.T) {
+	var err Error = NewPermissionDeniedError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewResourceExhaustedError(t *testing.T) {
+	var err Error = NewResourceExhaustedError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewFailedPreconditionError(t *testing.T) {
+	var err Error = NewFailedPreconditionError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewAbortedError(t *testing.T) {
+	var err Error = NewAbortedError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewOutOfRangeError(t *testing.T) {
+	var err Error = NewOutOfRangeError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewUnimplementedError(t *testing.T) {
+	var err Error = NewUnimplementedError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewInternalError(t *testing.T) {
+	var err Error = NewInternalError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewUnavailableError(t *testing.T) {
+	var err Error = NewUnavailableError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
+}
+
+func TestNewUnauthenticatedError(t *testing.T) {
+	var err Error = NewUnauthenticatedError("msg")
+	assertTrue(t, err != nil, "Expecting new error")
 }
 
 func TestPrettyPrintStruct(t *testing.T) {
@@ -79,13 +139,12 @@ func TestPrettyPrintStruct(t *testing.T) {
 
 }
 
-func TestEntityError(t *testing.T) {
-	basicEntity := "basicEntity"
+func TestError(t *testing.T) {
 	parent := errors.New("golang error")
 	parent2 := errors.New("previous error")
-	e := NewEntityError(basicEntity, "I/O error", parent, parent2)
+	e := NewGenericError("I/O error", parent, parent2)
 	errorMsg := e.Error()
-	assertEquals(t, "[Entity] I/O error", errorMsg, "Message should match")
+	assertEquals(t, "[Generic] I/O error", errorMsg, "Message should match")
 	detailedError := e.DebugReport()
 	fmt.Println(detailedError)
 	fmt.Println("String(): " + e.Error())
@@ -105,8 +164,8 @@ func TestAsError(t *testing.T) {
 }
 
 func TestCausedBy(t *testing.T) {
-	parent := NewOperationError("parent operation")
-	e := NewOperationError("current operation").CausedBy(parent)
+	parent := NewGenericError("parent operation")
+	e := NewGenericError("current operation").CausedBy(parent)
 	assertTrue(t, e != nil, "Should not be nil")
 	assertTrue(t, e.Parent != nil, "Expecting parent")
 }

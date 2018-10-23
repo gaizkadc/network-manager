@@ -7,5 +7,21 @@
     version="v0.0.3"
 
 [[constraint]]
-    name="github.com/nalej/grpc-ping-go"
+    name="github.com/nalej/grpc-network-go"
     version="v0.0.8"
+
+[[constraint]]
+    name="github.com/nalej/derrors"
+    version="v2.0.0"
+
+[[constraint]]
+    name="github.com/onsi/ginkgo"
+    version="v1.6.0"
+
+[[constraint]]
+    name="github.com/onsi/gomega"
+    version="v1.4.2"
+
+[[override]]
+  source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
+  name = "gopkg.in/fsnotify.v1"

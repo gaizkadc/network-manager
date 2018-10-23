@@ -29,4 +29,6 @@ type Error interface {
 	DebugReport() string
 	// StackTrace returns an array with the calling stack that created the error.
 	StackTrace() []StackEntry
+	// StackTraceAsString returns the stack trace elements as a string array.
+	StackTraceAsString() []string
 }

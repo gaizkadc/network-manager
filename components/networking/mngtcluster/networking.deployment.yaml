@@ -1,0 +1,33 @@
+###
+# Application networking
+###
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels:
+    cluster: management
+    component: networking
+  name: networking
+  namespace: nalej
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      cluster: management
+      component: networking
+  template:
+    metadata:
+      labels:
+        cluster: management
+        component: networking
+    spec:
+      containers:
+      - name: example
+        image: nalej/networking:VERSION
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 2000
+      imagePullSecrets:
+      - name: myregistrykey

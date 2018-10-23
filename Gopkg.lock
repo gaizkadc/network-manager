@@ -25,34 +25,20 @@
   version = "v1.0"
 
 [[projects]]
-  digest = "1:86d818a2f49041907b3af462606a269ca99395b5a04f91a4938d770943ed0274"
+  digest = "1:0cc441f3dfe124dd74f44dd7e466dfc17cc7edff468094fbc3847a96b5ebf6f7"
   name = "github.com/nalej/derrors"
   packages = ["."]
   pruneopts = ""
-  revision = "807705c78ea87c2e6c89023f86ed7ba9dbcad082"
-  version = "v1.1.1"
+  revision = "7a6df7f0bb1c7cddfec82c91119f193f6fcbc9d5"
+  version = "v2.0.0"
 
 [[projects]]
   branch = "master"
   digest = "1:04ad064359581a8e02c897f01d1f696f421d241542ad60bcdcdcc8170ab2ba1d"
   name = "github.com/nalej/example-grpc"
-  packages = [
-    "ping",
-    "tester",
-  ]
+  packages = ["ping"]
   pruneopts = ""
   revision = "7d9716fa3acc13c26166550c95929bec25c090fa"
-
-[[projects]]
-  branch = "master"
-  digest = "1:35a7be057e18ecffdc1da136bf5e6be6ab755ebc38e5bc16ac800daf28c0563c"
-  name = "github.com/nalej/example-grpc-server"
-  packages = [
-    "internal/app/grpcserver/services/ping",
-    "internal/app/grpcserver/services/tester",
-  ]
-  pruneopts = ""
-  revision = "944359075093c31f9435f4edcf2cf36079d79440"
 
 [[projects]]
   digest = "1:8df8bf0743bd632dcae85b2d9bc46d587146f39ca596d5e5c58d2ae2b165519e"
@@ -101,11 +87,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2ed0bf267e44950120acd95570227e28184573ffb099bd85b529ee148e004ddb"
+  digest = "1:03a1b1f2bfb0a6b2291c4161032429b1e8a1f23cc68530ad64358f8b493ead5f"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = ""
-  revision = "fa43e7bc11baaae89f3f902b2b4d832b68234844"
+  revision = "8a28ead16f52c8aaeffbf79239b251dfdf6c4f96"
 
 [[projects]]
   digest = "1:5acd3512b047305d49e8763eef7ba423901e85d5dd2fd1e71778a0ea8de10bd4"
@@ -179,10 +165,8 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/nalej/example-grpc-server/internal/app/grpcserver/services/ping",
-    "github.com/nalej/example-grpc-server/internal/app/grpcserver/services/tester",
+    "github.com/nalej/derrors",
     "github.com/nalej/example-grpc/ping",
-    "github.com/nalej/example-grpc/tester",
     "github.com/rs/zerolog",
     "github.com/rs/zerolog/log",
     "github.com/spf13/cobra",

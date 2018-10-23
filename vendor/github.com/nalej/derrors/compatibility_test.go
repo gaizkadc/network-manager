@@ -22,7 +22,7 @@ import (
 )
 
 func generateCompatibleError() error {
-	return NewOperationError("This is a test")
+	return NewGenericError("This is a test")
 }
 
 // Test the compatibility with the default error interface.

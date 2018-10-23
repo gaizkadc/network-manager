@@ -68,17 +68,6 @@ type GenericError struct {
 	Stack []StackEntry `json:"stackTrace"`
 }
 
-// NewGenericError returns a general purpose error.
-func NewGenericError(msg string, causes ...error) *GenericError {
-	return &GenericError{
-		GenericErrorType,
-		msg,
-		make([]string, 0),
-		ErrorsToString(causes),
-		nil,
-		GetStackTrace()}
-}
-
 // WithParams permits to track extra parameters in the operation error.
 func (ge *GenericError) WithParams(params ...interface{}) *GenericError {
 	for _, value := range params {
@@ -96,6 +85,15 @@ func (ge *GenericError) WithParams(params ...interface{}) *GenericError {
 func (ge *GenericError) CausedBy(parent Error) *GenericError {
 	ge.Parent = parent
 	return ge
+}
+
+// StackTraceAsString returns the stack trace elements as a string array.
+func (ge *GenericError) StackTraceAsString() []string {
+	result := make([]string, 0)
+	for _, entry := range ge.Stack {
+		result = append(result, entry.String())
+	}
+	return result
 }
 
 // StackToString generates a string with a stack entry per line.
@@ -160,7 +158,7 @@ func (ge *GenericError) parentToString() string {
 }
 
 func (ge *GenericError) Error() string {
-	return fmt.Sprintf("[%s] %s", ge.ErrorType, ge.Message)
+	return fmt.Sprintf("[%s] %s", ErrorTypeAsString(ge.ErrorType), ge.Message)
 }
 
 // Type returns the ErrorType associated with the current DaishoError.
@@ -233,33 +231,9 @@ func PrettyPrintStruct(data interface{}) string {
 	return fmt.Sprintf("%#v", data)
 }
 
-// NewEntityError creates a new DaishoError of type Entity.
-//   params:
-//     entity The associated entity.
-//     msg The error message.
-//   returns:
-//     An EntityError.
-func NewEntityError(entity interface{}, msg string, causes ...error) *GenericError {
-	params := make([]string, 0)
-	err := &GenericError{
-		EntityErrorType,
-		msg,
-		params,
-		ErrorsToString(causes),
-		nil,
-		GetStackTrace()}
-
-	return err.WithParams(entity)
-}
-
-// NewConnectionError creates a new DaishoError of type Connection.
-//   params:
-//     msg The error message.
-//   returns:
-//     An EntityError.
-func NewConnectionError(msg string, causes ...error) *GenericError {
+func NewError(errorType ErrorType, msg string, causes ...error) *GenericError {
 	return &GenericError{
-		ConnectionErrorType,
+		errorType,
 		msg,
 		make([]string, 0),
 		ErrorsToString(causes),
@@ -267,10 +241,10 @@ func NewConnectionError(msg string, causes ...error) *GenericError {
 		GetStackTrace()}
 }
 
-// NewOperationError creates a new OperationError.
-func NewOperationError(msg string, causes ...error) *GenericError {
+// NewGenericError returns a general purpose error.
+func NewGenericError(msg string, causes ...error) *GenericError {
 	return &GenericError{
-		OperationErrorType,
+		Generic,
 		msg,
 		make([]string, 0),
 		ErrorsToString(causes),
@@ -278,11 +252,165 @@ func NewOperationError(msg string, causes ...error) *GenericError {
 		GetStackTrace()}
 }
 
-// FromJSON unmarshalls a byte array with the JSON representation into a DaishoError of the correct type.
+// NewCanceledError returns an error associated with an operation that has been canceled.
+func NewCanceledError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		Canceled,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewInvalidArgumentError returns an error that indicates the use of an invalid argument.
+func NewInvalidArgumentError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		InvalidArgument,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewDeadlineExceededError returns an error that indicates the deadline for the completion of an operation expired.
+func NewDeadlineExceededError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		DeadlineExceeded,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewNotFoundError returns an error that indicates that the requested entity did not exists.
+func NewNotFoundError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		NotFound,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewAlreadyExistsError returns an error that indicates that the target entity already exists.
+func NewAlreadyExistsError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		AlreadyExists,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewPermissionDeniedError returns an error that indicates that the client is not authorized.
+func NewPermissionDeniedError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		PermissionDenied,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewResourceExhaustedError returns an error that indicates that a given resource has been exhausted.
+func NewResourceExhaustedError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		ResourceExhausted,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewFailedPreconditionError returns an error that indicates that a given precondition for an operation failed.
+func NewFailedPreconditionError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		FailedPrecondition,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewAbortedError returns an error that indicates that a given operation was aborted due to an internal issue.
+func NewAbortedError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		Aborted,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewOutOfRangeError returns an error that indicates that a requested resource is out of the available range.
+func NewOutOfRangeError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		OutOfRange,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewUnimplementedError returns an error that indicates that a requested operation is not implemented yet.
+func NewUnimplementedError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		Unimplemented,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewInternalError returns an error that indicates that an internal error occurred.
+func NewInternalError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		Internal,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewUnavailableError returns an error that indicates that a given service is not currently available.
+func NewUnavailableError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		Unavailable,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// NewUnauthenticatedError returns an error that indicates that a given request is not authenticated.
+func NewUnauthenticatedError(msg string, causes ...error) *GenericError {
+	return &GenericError{
+		Unauthenticated,
+		msg,
+		make([]string, 0),
+		ErrorsToString(causes),
+		nil,
+		GetStackTrace()}
+}
+
+// FromJSON unmarshalls a byte array with the JSON representation into an Error of the correct type.
 //   params:
 //     data The byte array with the serialized JSON.
 //   returns:
-//     A DaishoError if the data can be unmarshalled.
+//     An Error if the data can be unmarshalled.
 //     A Golang error if the unmarshal operation fails.
 func FromJSON(data []byte) (Error, error) {
 	genericError := &GenericError{}
@@ -295,9 +423,4 @@ func FromJSON(data []byte) (Error, error) {
 		return result, nil
 	}
 	return nil, errors.New("unsupported error type in conversion")
-}
-
-// IsDecoded checks that the required fields are decoded.
-func IsDecoded(err Error) bool {
-	return err.Type() != ""
 }

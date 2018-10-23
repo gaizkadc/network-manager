@@ -14,30 +14,65 @@
  * limitations under the License.
  */
 
-// Definition of the supported types of error.
+// Definition of the supported types of error. Based on https://godoc.org/google.golang.org/grpc/codes
 
 package derrors
 
-// ErrorType defines a new type for creating a enum of error types.
-type ErrorType string
+type ErrorType int
 
-// GenericErrorType to be used with general errors.
-const GenericErrorType ErrorType = "GenericError"
+const (
+	Generic ErrorType = iota + 1
+	Canceled
+	InvalidArgument
+	DeadlineExceeded
+	NotFound
+	AlreadyExists
+	PermissionDenied
+	ResourceExhausted
+	FailedPrecondition
+	Aborted
+	OutOfRange
+	Unimplemented
+	Internal
+	Unavailable
+	Unauthenticated
+)
 
-// ConnectionErrorType is associated with connectivity errors.
-const ConnectionErrorType ErrorType = "Connection"
+var ErrorTypesValues = map[string]ErrorType{
+	"Generic":            Generic,
+	"Canceled":           Canceled,
+	"InvalidArgument":    InvalidArgument,
+	"DeadlineExceeded":   DeadlineExceeded,
+	"NotFound":           NotFound,
+	"AlreadyExists":      AlreadyExists,
+	"PermissionDenied":   PermissionDenied,
+	"ResourceExhausted":  ResourceExhausted,
+	"FailedPrecondition": FailedPrecondition,
+	"Aborted":            Aborted,
+	"OutOfRange":         OutOfRange,
+	"Unimplemented":      Unimplemented,
+	"Internal":           Internal,
+	"Unavailable":        Unavailable,
+	"Unauthenticated":    Unauthenticated,
+}
 
-// EntityErrorType is associated with entity related errors including validation, association, etc.
-const EntityErrorType ErrorType = "Entity"
-
-// OperationErrorType is associated with failures in external operations.
-const OperationErrorType ErrorType = "Operation"
-
-// ProviderErrorType is associated with provider related errors including invalid operations, provider failures, etc.
-const ProviderErrorType ErrorType = "Provider"
-
-// OrchestrationErrorType is associated with orchestration related errors including orchestration failures, preconditions, etc.
-const OrchestrationErrorType ErrorType = "Orchestration"
+var ErrorTypeNames = map[ErrorType]string{
+	Generic:            "Generic",
+	Canceled:           "Canceled",
+	InvalidArgument:    "InvalidArgument",
+	DeadlineExceeded:   "DeadlineExceeded",
+	NotFound:           "NotFound",
+	AlreadyExists:      "AlreadyExists",
+	PermissionDenied:   "PermissionDenied",
+	ResourceExhausted:  "ResourceExhausted",
+	FailedPrecondition: "FailedPrecondition",
+	Aborted:            "Aborted",
+	OutOfRange:         "OutOfRange",
+	Unimplemented:      "Unimplemented",
+	Internal:           "Internal",
+	Unavailable:        "Unavailable",
+	Unauthenticated:    "Unauthenticated",
+}
 
 // ValidErrorType checks the type enum to determine if the string belongs to the enumeration.
 //   params:
@@ -45,22 +80,12 @@ const OrchestrationErrorType ErrorType = "Orchestration"
 //   returns:
 //     Whether it is contained in the enum.
 func ValidErrorType(errorType ErrorType) bool {
-	switch errorType {
-	case "":
-		return false
-	case GenericErrorType:
-		return true
-	case ConnectionErrorType:
-		return true
-	case EntityErrorType:
-		return true
-	case OperationErrorType:
-		return true
-	case ProviderErrorType:
-		return true
-	case OrchestrationErrorType:
-		return true
-	default:
-		return false
-	}
+	_, exists := ErrorTypeNames[errorType]
+	return exists
+}
+
+// ErrorTypeAsString returns the string representation of the error.
+func ErrorTypeAsString(errorType ErrorType) string {
+	s, _ := ErrorTypeNames[errorType]
+	return s
 }

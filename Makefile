@@ -1,9 +1,9 @@
 #
 #  Copyright 2018 Nalej
-# 
+#
 
 # Name of the target applications to be built
-APPS=ping
+APPS=networking
 
 # Target directory to store binaries and results
 TARGET=bin
@@ -155,5 +155,3 @@ publish-image:
    	    echo  Publish image of app $$app ; \
     done ; \
     docker logout ; \
-
-
