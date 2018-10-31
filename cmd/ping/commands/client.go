@@ -7,7 +7,7 @@
 package commands
 
 import (
-	"github.com/nalej/networking/pkg/pinger"
+	"github.com/nalej/network-manager/internal/pkg/pinger"
 	"github.com/spf13/cobra"
 )
 

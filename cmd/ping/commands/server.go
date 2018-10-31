@@ -7,7 +7,7 @@
 package commands
 
 import (
-	"github.com/nalej/networking/pkg/server"
+	"github.com/nalej/network-manager/internal/pkg/server"
 	"github.com/spf13/cobra"
 )
 

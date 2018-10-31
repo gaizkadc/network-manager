@@ -5,7 +5,7 @@
 package main
 
 import (
-	"github.com/nalej/networking/cmd/networking/commands"
+	"github.com/nalej/network-manager/cmd/networking/commands"
 )
 
 func main() {

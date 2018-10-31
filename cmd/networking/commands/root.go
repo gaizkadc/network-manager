@@ -5,7 +5,7 @@
 package commands
 
 import (
-	"github.com/nalej/networking/version"
+	"github.com/nalej/network-manager/version"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
