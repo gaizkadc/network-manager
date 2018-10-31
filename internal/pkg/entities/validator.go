@@ -18,8 +18,6 @@ const emptyFQDN = "FQDN cannot be empty"
 func ValidAddNetworkRequest (networkRequest *grpc_network_go.AddNetworkRequest) derrors.Error {
 	if networkRequest.OrganizationId == "" {
 		return derrors.NewInvalidArgumentError(emptyOrganizationId)
-	} else if networkRequest.NetworkId == "" {
-		return derrors.NewInvalidArgumentError(emptyNetworkId)
 	} else if networkRequest.Name == "" {
 		return derrors.NewInvalidArgumentError(emptyNetworkName)
 	}
