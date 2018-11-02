@@ -151,14 +151,6 @@ type Config struct {
 	Token string
 }
 
-const (
-	centralURI = "https://my.zerotier.com"
-	// Prefix for all controller endpoints
-	controllerPath = "/controller"
-	// Prefix for all ZeroTier Central endpoints
-	centralPath = "/api"
-)
-
 // Pre-defined values to be used for pointers
 func True() *bool {
 	val := true

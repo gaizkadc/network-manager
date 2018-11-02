@@ -32,4 +32,5 @@ func init() {
 	runCmd.Flags().StringVar(&config.SystemModelURL, "sm", "localhost:8800", "System Model URL")
 	runCmd.Flags().StringVar(&config.ZTUrl, "zturl", "http://localhost:9993", "ZT Controller URL")
 	runCmd.Flags().StringVar(&config.ZTAccessToken, "ztaccesstoken", "", "ZT Access Token")
+	runCmd.MarkFlagRequired("ztaccesstoken")
 }

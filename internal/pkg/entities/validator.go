@@ -15,10 +15,10 @@ const emptyNetworkId = "network_id cannot be empty"
 const emptyNetworkName = "network_name cannot be empty"
 const emptyFQDN = "FQDN cannot be empty"
 
-func ValidAddNetworkRequest (networkRequest *grpc_network_go.AddNetworkRequest) derrors.Error {
-	if networkRequest.OrganizationId == "" {
+func ValidAddNetworkRequest (addNetworkRequest *grpc_network_go.AddNetworkRequest) derrors.Error {
+	if addNetworkRequest.OrganizationId == "" {
 		return derrors.NewInvalidArgumentError(emptyOrganizationId)
-	} else if networkRequest.Name == "" {
+	} else if addNetworkRequest.Name == "" {
 		return derrors.NewInvalidArgumentError(emptyNetworkName)
 	}
 	return nil
@@ -45,9 +45,12 @@ func ValidFQDN (fqdn *grpc_network_go.DNSEntry) derrors.Error {
 	return nil
 }
 
-func ValidDeleteNetworkRequest (networkId *grpc_network_go.NetworkId) derrors.Error {
-	if networkId.NetworkId == "" {
+func ValidDeleteNetworkRequest (deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) derrors.Error {
+	if deleteNetworkRequest.OrganizationId == "" {
+		return derrors.NewInvalidArgumentError(emptyOrganizationId)
+	} else if deleteNetworkRequest.NetworkId == "" {
 		return derrors.NewInvalidArgumentError(emptyNetworkId)
 	}
+
 	return nil
 }

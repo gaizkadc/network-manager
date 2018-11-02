@@ -60,10 +60,20 @@ func (h * Handler) GetNetwork (ctx context.Context, networkID *grpc_network_go.N
 
 // DeleteNetwork deletes a network from the system.
 func (h * Handler) DeleteNetwork (ctx context.Context, deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) (*grpc_common_go.Success, error) {
+	log.Debug().Str("organizationID", deleteNetworkRequest.OrganizationId).
+		Str("network_id", deleteNetworkRequest.NetworkId).Msg("get network")
+	err := entities.ValidDeleteNetworkRequest(deleteNetworkRequest)
+	if err != nil {
+		return nil, conversions.ToGRPCError(err)
+	}
 
-	panic("delete network not implemented yet")
+	err = h.Manager.DeleteNetwork(deleteNetworkRequest)
+	if err != nil {
+		return nil, conversions.ToGRPCError(err)
+	}
+	log.Debug().Str("networkID", deleteNetworkRequest.NetworkId).Msg("network deleted")
 
-	return nil, nil
+	return &grpc_common_go.Success{}, nil
 }
 
 func (h *Handler) JoinNetwork(ctx context.Context, in *grpc_network_go.NetworkId) (*grpc_common_go.Success, error) {

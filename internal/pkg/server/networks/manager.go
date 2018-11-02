@@ -81,3 +81,27 @@ func (m * Manager) GetNetwork(networkId *grpc_network_go.NetworkId) (*entities.N
 
 	return &toReturn, nil
 }
+
+// DeleteNetwork deletes a network from the system.
+func (m * Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) derrors.Error {
+	// Check if organization exists
+	_, err := m.OrganizationClient.GetOrganization(context.Background(),
+		&grpc_organization_go.OrganizationId{OrganizationId:  deleteNetworkRequest.OrganizationId,})
+	if err != nil {
+		return derrors.NewNotFoundError("invalid organizationID", err)
+	}
+
+	// retrieve network to be deleted
+	toBeDeleted, err := m.ZTClient.Get(deleteNetworkRequest.NetworkId)
+	if err != nil {
+		return derrors.NewNotFoundError("cannot retrieve network to be deleted", err)
+	}
+
+	// Use zt client to delete network
+	err = m.ZTClient.Delete(toBeDeleted)
+	if err != nil {
+		return derrors.NewGenericError("Cannot delete ZeroTier network", err)
+	}
+
+	return nil
+}

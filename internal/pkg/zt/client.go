@@ -34,7 +34,9 @@ func NewZTClient(url string, accessToken string) (*ClientZT, error) {
 
 // Constants
 const (
+	controllerPath = "/controller"
 	networkAddPath = "/controller/network/%s______"
+	networkDelPath = "/controller/network/%s"
 	networkPath = controllerPath + "/network"
 	networkDetailPath = networkPath + "/%s"
 	PeerAddressLength = 10
@@ -104,4 +106,35 @@ func (ztc *ClientZT) Get(networkID string) (*ZTNetwork, derrors.Error) {
 	}
 
 	return response.Result.(*ZTNetwork), nil
+}
+
+// Delete a ZeroTier network from the controller
+//   params:
+//     entity The Network to be deleted
+//   returns: .
+//     Error, if there is an internal error.
+func (ztc *ClientZT) Delete(entity *ZTNetwork) derrors.Error {
+	// Get Controller ZT address, as that's needed to create the proper
+	status, err := ztc.GetStatus()
+
+	if err != nil {
+		log.Error().Err(err).Msg("error getting status when deleting network")
+		return derrors.NewNotFoundError("Error deleting network", err)
+	}
+
+	// Check if we have an address
+	if len(status.Address) != PeerAddressLength {
+		return derrors.NewInvalidArgumentError("Invalid address in peer status").WithParams(status)
+	}
+
+	path := fmt.Sprintf(networkDelPath, entity.Nwid)
+	log.Debug().Msg(path)
+
+	// Send delete network request to controller
+	response := ztc.client.Delete(path, entity)
+	if response.Error != nil {
+		return derrors.NewInternalError("Error deleting network", response.Error)
+	}
+
+	return nil
 }
