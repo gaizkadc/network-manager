@@ -24,9 +24,7 @@ func NewHandler(manager Manager) *Handler{
 
 // AddNetwork adds a network to the system.
 func (h *Handler) AddNetwork (ctx context.Context, addNetworkRequest *grpc_network_go.AddNetworkRequest) (*grpc_network_go.Network, error) {
-	log.Debug().Str("request_id", addNetworkRequest.RequestId).
-		Str("organizationID", addNetworkRequest.OrganizationId).
-		Str("network_id", addNetworkRequest.NetworkId).
+	log.Debug().Str("organizationID", addNetworkRequest.OrganizationId).
 		Str("network_name", addNetworkRequest.Name).Msg("add network")
 	err := entities.ValidAddNetworkRequest(addNetworkRequest)
 	if err != nil {
@@ -42,13 +40,22 @@ func (h *Handler) AddNetwork (ctx context.Context, addNetworkRequest *grpc_netwo
 	return network.ToGRPC(), nil
 }
 
-
-
 // GetNetwork retrieves the network information.
 func (h * Handler) GetNetwork (ctx context.Context, networkID *grpc_network_go.NetworkId) (*grpc_network_go.Network, error){
-	panic("get network not implemented yet")
+	log.Debug().Str("organizationID", networkID.OrganizationId).
+		Str("network_id", networkID.NetworkId).Msg("get network")
+	err := entities.ValidNetworkId(networkID)
+	if err != nil {
+		return nil, conversions.ToGRPCError(err)
+	}
 
-	return nil, nil
+	network, err := h.Manager.GetNetwork(networkID)
+	if err != nil {
+		return nil, conversions.ToGRPCError(err)
+	}
+	log.Debug().Str("networkID", network.NetworkId).Msg("network retrieved")
+
+	return network.ToGRPC(), nil
 }
 
 // DeleteNetwork deletes a network from the system.

@@ -38,7 +38,7 @@ func NewManager (organizationConn *grpc.ClientConn, url string, accessToken stri
 	}, nil
 }
 
-// AddNetwork adds a new cluster to the system.
+// AddNetwork adds a new network to the system.
 func (m * Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkRequest) (*entities.Network, derrors.Error) {
 
 	// Check if organization exists
@@ -60,3 +60,24 @@ func (m * Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkReque
 	return &toAdd, nil
 }
 
+// GetNetwork gets an existing network from the system.
+func (m * Manager) GetNetwork(networkId *grpc_network_go.NetworkId) (*entities.Network, derrors.Error) {
+
+	// Check if organization exists
+	_, err := m.OrganizationClient.GetOrganization(context.Background(),
+		&grpc_organization_go.OrganizationId{OrganizationId:  networkId.OrganizationId,})
+	if err != nil {
+		return nil, derrors.NewNotFoundError("invalid organizationID", err)
+	}
+
+	// use zt client to get network
+	ztNetwork, err := m.ZTClient.Get(networkId.NetworkId)
+
+	if err != nil {
+		return nil, derrors.NewGenericError("Cannot get ZeroTier network", err)
+	}
+
+	toReturn := ztNetwork.ToNetwork(networkId.OrganizationId)
+
+	return &toReturn, nil
+}

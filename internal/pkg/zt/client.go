@@ -35,8 +35,23 @@ func NewZTClient(url string, accessToken string) (*ClientZT, error) {
 // Constants
 const (
 	networkAddPath = "/controller/network/%s______"
+	networkPath = controllerPath + "/network"
+	networkDetailPath = networkPath + "/%s"
 	PeerAddressLength = 10
 )
+
+func (ztc *ClientZT) GetStatus() (*PeerStatus, derrors.Error) {
+	result := PeerStatus{}
+	response := ztc.client.Get("/status", &result)
+
+	log.Debug().Msgf("show the thing %d",response.Status)
+	if response.Error != nil {
+		log.Error().Err(response.Error).Msg("error getting status")
+		return nil, response.Error
+	}
+
+	return &result, nil
+}
 
 // Add a ZeroTier network to the controller
 //   params:
@@ -48,7 +63,6 @@ const (
 // only "name" is required.
 func (ztc *ClientZT) Add(entity *ZTNetwork) (*ZTNetwork, derrors.Error) {
 	// Get Controller ZT address, as that's needed to create the proper
-
 	status, err := ztc.GetStatus()
 
 	if err != nil {
@@ -72,18 +86,22 @@ func (ztc *ClientZT) Add(entity *ZTNetwork) (*ZTNetwork, derrors.Error) {
 	return network, nil
 }
 
+// Get ZeroTier network information from the controller
+//   params:
+//     networkID The ZeroTier network ID the get detailed information for
+//   returns:
+//     The network.
+//     Error, if there is an internal error.
+func (ztc *ClientZT) Get(networkID string) (*ZTNetwork, derrors.Error) {
+	// Get endpoint
+	path := fmt.Sprintf(networkDetailPath, networkID)
 
-func (ztc *ClientZT) GetStatus() (*PeerStatus, derrors.Error) {
-	result := PeerStatus{}
-	response := ztc.client.Get("/status", &result)
-
-	log.Debug().Msgf("show the thing %d",response.Status)
+	// Send get network request to controller
+	network := &ZTNetwork{}
+	response := ztc.client.Get(path, network)
 	if response.Error != nil {
-		log.Error().Err(response.Error).Msg("error getting status")
-		return nil, response.Error
+		return nil, derrors.NewNotFoundError("Error retrieving network", response.Error).WithParams(networkID)
 	}
 
-	return &result, nil
+	return response.Result.(*ZTNetwork), nil
 }
-
-
