@@ -16,7 +16,7 @@ var delNetworkId string
 var delNetworkOrgId string
 
 var delNetworkCmd = &cobra.Command{
-	Use:   "del",
+	Use:   "delete",
 	Short: "Delete an existing network",
 	Long:  `Delete an existing network`,
 	Run: func(cmd *cobra.Command, args []string) {
