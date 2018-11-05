@@ -12,21 +12,24 @@ import (
 type Config struct {
 	// Address where the API service will listen requests.
 	Port int
-	// DNSServerAddress with the host:port to connect to DNS-Server
-	DNSServerAddress string
+	// System model url
+	SystemModelURL string
+	// ZT url
+	ZTUrl string
+	// ZT access token
+	ZTAccessToken string
 }
 
 func (conf * Config) Validate() derrors.Error {
 	if conf.Port <= 0 {
 		return derrors.NewInvalidArgumentError("port must be specified")
 	}
-	if conf.DNSServerAddress == "" {
-		return derrors.NewInvalidArgumentError("DNS Server must be set")
-	}
 	return nil
 }
 
 func (conf *Config) Print() {
 	log.Info().Int("port", conf.Port).Msg("gRPC port")
-	log.Info().Str("URL", conf.DNSServerAddress).Msg("System Model")
+	log.Info().Str("sm", conf.SystemModelURL).Msg("SM URL")
+	log.Info().Str("zturl", conf.ZTUrl).Msg("ZT URL")
+	log.Info().Str("ztaccesstoken", conf.ZTAccessToken).Msg("ZT Access Token")
 }

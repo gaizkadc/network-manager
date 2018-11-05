@@ -3,7 +3,7 @@
 #
 
 # Name of the target applications to be built
-APPS=networking
+APPS=networking networking-cli
 
 # Target directory to store binaries and results
 TARGET=bin

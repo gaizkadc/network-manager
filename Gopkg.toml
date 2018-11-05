@@ -8,11 +8,15 @@
 
 [[constraint]]
     name="github.com/nalej/grpc-network-go"
-    version="v0.0.2"
+    version="v0.0.1"
 
 [[constraint]]
     name="github.com/nalej/derrors"
     version="v2.0.0"
+
+[[constraint]]
+    name="github.com/nalej/dhttp"
+    version="v1.3.0"
 
 [[constraint]]
     name="github.com/onsi/ginkgo"
