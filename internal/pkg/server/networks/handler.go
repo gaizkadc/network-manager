@@ -81,7 +81,21 @@ func (h *Handler) JoinNetwork(ctx context.Context, in *grpc_network_go.NetworkId
 	return nil, nil
 }
 
-func (h *Handler) ListNetworks(ctx context.Context, in *grpc_organization_go.OrganizationId) (*grpc_network_go.NetworkList, error) {
-	panic("list networks not implemented yet")
-	return nil, nil
+func (h *Handler) ListNetworks(ctx context.Context, organizationID *grpc_organization_go.OrganizationId) (*grpc_network_go.NetworkList, error) {
+	log.Debug().Str("organizationID", organizationID.OrganizationId).Msg("list networks")
+	err := entities.ValidOrganizationId(organizationID)
+	if err != nil {
+		return nil, conversions.ToGRPCError(err)
+	}
+
+	networkList, err := h.Manager.ListNetworks(organizationID)
+
+	foundNetworks := make([]*grpc_network_go.Network,len(networkList))
+	for i, n := range networkList {
+		foundNetworks[i] = n.ToGRPC()
+	}
+
+	grpcNetworkList := grpc_network_go.NetworkList{Networks:foundNetworks }
+
+	return &grpcNetworkList, nil
 }

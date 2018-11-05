@@ -105,3 +105,28 @@ func (m * Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNet
 
 	return nil
 }
+
+// ListNetworks gets a list of existing networks from an organization.
+func (m * Manager) ListNetworks(organizationId *grpc_organization_go.OrganizationId) ([]entities.Network, derrors.Error) {
+
+	// Check if organization exists
+	_, err := m.OrganizationClient.GetOrganization(context.Background(),
+		&grpc_organization_go.OrganizationId{OrganizationId:  organizationId.OrganizationId,})
+	if err != nil {
+		return nil, derrors.NewNotFoundError("invalid organizationID", err)
+	}
+
+	// use zt client to get network
+	ztNetworkList, err := m.ZTClient.List(organizationId.OrganizationId)
+	if err != nil {
+		return nil, derrors.NewGenericError("Cannot get ZeroTier network list", err)
+	}
+
+	networkList := make([]entities.Network, len(ztNetworkList))
+
+	for i, n := range ztNetworkList {
+		networkList[i] = n.ToNetwork(organizationId.OrganizationId)
+	}
+
+	return networkList, nil
+}

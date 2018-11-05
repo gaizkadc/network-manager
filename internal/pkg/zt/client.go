@@ -90,7 +90,7 @@ func (ztc *ClientZT) Add(entity *ZTNetwork) (*ZTNetwork, derrors.Error) {
 
 // Get ZeroTier network information from the controller
 //   params:
-//     networkID The ZeroTier network ID the get detailed information for
+//     networkID The ZeroTier network ID to get detailed information for
 //   returns:
 //     The network.
 //     Error, if there is an internal error.
@@ -137,4 +137,32 @@ func (ztc *ClientZT) Delete(entity *ZTNetwork) derrors.Error {
 	}
 
 	return nil
+}
+
+// Retrieves a list of ZeroTier networks from an existing organization
+//   params:
+//     organizationID The ZeroTier organization ID to get detailed information for
+//   returns:
+//     The list of networks.
+//     Error, if there is an internal error.
+func (ztc *ClientZT) List(organizationID string) ([]ZTNetwork, derrors.Error) {
+
+	// Send get network request to controller
+	networkList := make ([]string, 0)
+	response := ztc.client.Get(networkPath, &networkList)
+	if response.Error != nil {
+		return nil, derrors.NewNotFoundError("Error retrieving networks", response.Error).WithParams(organizationID)
+	}
+	//var networks []ZTNetwork
+	networks := make([]ZTNetwork, len(networkList))
+	for i, n := range networkList {
+	//for i := 0; i < len(networkList); i++ {
+		converted, err := ztc.Get(n)
+		if err != nil {
+			log.Error().Msgf("Impossible to get network %s", n)
+			return nil, err
+		}
+		networks[i] = *converted
+	}
+	return networks, nil
 }

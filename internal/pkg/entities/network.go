@@ -27,4 +27,3 @@ func (n *Network) ToGRPC() *grpc_network_go.Network{
 		CreationTimestamp: n.CreationTimestamp,
 	}
 }
-
