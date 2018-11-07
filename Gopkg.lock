@@ -140,12 +140,12 @@
   version = "v0.0.11"
 
 [[projects]]
-  digest = "1:ee1988b66b49ced6e215a0f7eac69f046668176b6cfdcc839b181489457d9c4b"
+  digest = "1:b5951c1f44501b49eac8bc0dd904c68560f9813715501e4f6e67436b4d94fc18"
   name = "github.com/nalej/grpc-network-go"
   packages = ["."]
   pruneopts = ""
-  revision = "6849c492269fb572bc8a2a64704e199a543f8a5b"
-  version = "v0.0.6"
+  revision = "a45e932a56762a4da775024db83dc4586cdba57a"
+  version = "v0.0.7"
 
 [[projects]]
   digest = "1:db9d368ab8ba8b6f1388a734966636f1d91df3a99aaf621599b965ee810758fe"
@@ -226,15 +226,15 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e18fc22a3b4100e2a6e1c8609cb291ab5ec13f5bdcabd58a41cc93a0c2f51aed"
+  digest = "1:a242f23ceb22423c0a2111d9488a2ab19a2e817111a4f3e2385f5f89a53e619f"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = ""
-  revision = "bfa7d42eb568d3c454e1853744768cc80718040d"
+  revision = "e4dc69e5b2fd71dcaf8bd5d054eb936deb78d1fa"
 
 [[projects]]
   branch = "master"
-  digest = "1:6ce856debb8efe03fa14d8637c6f573df043d2571cacca0266f122b3d4716729"
+  digest = "1:33ff56b9cc51b337d3bf1f5b375c9928221f7cfa72e94773d48482d5437f6468"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -246,7 +246,7 @@
     "trace",
   ]
   pruneopts = ""
-  revision = "10aee181995363b41f712a55844a0dd52ea04646"
+  revision = "a544f70c90f196e50d198126db0c4cb2b562fec0"
 
 [[projects]]
   branch = "master"

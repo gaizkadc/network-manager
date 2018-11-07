@@ -15,7 +15,7 @@ import (
 // GRPC server address
 var deleteEntryServer string
 // Network ID
-var deleteEntryNetworkId string
+var deleteEntryOrganizationId string
 // FQDN
 var deleteEntryFqdn string
 
@@ -32,7 +32,7 @@ var deleteEntryCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(deleteEntryCmd)
 	deleteEntryCmd.Flags().StringVar(&deleteEntryServer, "server", "localhost:8000", "Networking manager server URL")
-	deleteEntryCmd.Flags().StringVar(&deleteEntryNetworkId, "netid", "", "ID of the network in which the DNS entry will be added")
+	deleteEntryCmd.Flags().StringVar(&deleteEntryOrganizationId, "orgid", "", "ID of the organization from which the DNS entry will be deleted")
 	deleteEntryCmd.Flags().StringVar(&deleteEntryFqdn, "fqdn", "", "FQDN of the DNS entry")
 	deleteEntryCmd.MarkFlagRequired("netid")
 	deleteEntryCmd.MarkFlagRequired("fqdn")
@@ -49,8 +49,8 @@ func deleteEntry() {
 
 	client := grpc_network_go.NewDNSClient(conn)
 
-	request := grpc_network_go.DNSEntry{
-		NetworkId: deleteEntryNetworkId,
+	request := grpc_network_go.DeleteDNSEntryRequest{
+		OrganizationId: deleteEntryOrganizationId,
 		Fqdn:      deleteEntryFqdn,
 	}
 

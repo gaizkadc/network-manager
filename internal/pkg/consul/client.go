@@ -49,7 +49,8 @@ func (a *ConsulClient) Delete (serviceID string) derrors.Error {
 	return nil
 }
 
-func (a *ConsulClient) List () ([]Service, derrors.Error) {
+func (a *ConsulClient) List (serviceKind string) ([]Service, derrors.Error) {
+
 	services, err := a.client.Agent().Services()
 
 	if err != nil {

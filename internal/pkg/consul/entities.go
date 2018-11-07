@@ -9,14 +9,16 @@ import (
 )
 
 type Service struct {
-	ID string
+	Kind api.ServiceKind
+	//ID string
 	Service string
 	Address string
 }
 
 func ServiceFromConsulAPI (s *api.AgentService) Service {
 	return Service {
-		ID: s.ID,
+		Kind: s.Kind,
+		//ID: s.ID,
 		Service: s.Service,
 		Address: s.Address,
 	}

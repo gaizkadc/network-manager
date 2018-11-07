@@ -6,8 +6,10 @@ package dns
 
 import (
 	"context"
+	"github.com/nalej/derrors"
 	"github.com/nalej/grpc-common-go"
 	"github.com/nalej/grpc-network-go"
+	"github.com/nalej/grpc-organization-go"
 	"github.com/nalej/network-manager/internal/pkg/entities"
 	"github.com/nalej/grpc-utils/pkg/conversions"
 	"github.com/rs/zerolog/log"
@@ -21,16 +23,34 @@ func NewHandler(manager Manager) *Handler{
 	return &Handler{manager}
 }
 
-func (h * Handler) ListEntries (ctx context.Context, networkID *grpc_network_go.NetworkId) (*grpc_network_go.DNSEntryList, error) {
-	panic("list dns entries not implemented yet")
-	return nil, nil
+func (h * Handler) ListEntries (ctx context.Context, organizationID *grpc_organization_go.OrganizationId) (*grpc_network_go.DNSEntryList, error) {
+	log.Debug().Str("organizationId", organizationID.OrganizationId).Msg("list dns entries")
+
+	entryList, err := h.Manager.ListDNSEntries(organizationID)
+
+	if err != nil {
+		log.Error().Msg("Unable to retrieve DNS list from the system")
+		return nil, derrors.NewGenericError(err.Error())
+	}
+
+	foundEntries := make ([]*grpc_network_go.DNSEntry, len(entryList))
+	for i, n := range entryList {
+		foundEntries[i] = n.ToGRPC()
+	}
+
+	grpcEntryList := grpc_network_go.DNSEntryList{DnsEntries: foundEntries}
+
+	return &grpcEntryList, nil
 }
 
-func (h * Handler) AddDNSEntry (ctx context.Context, entry *grpc_network_go.DNSEntry) (*grpc_common_go.Success, error) {
-	log.Debug().Str("networkId", entry.NetworkId).
+func (h * Handler) AddDNSEntry (ctx context.Context, entry *grpc_network_go.AddDNSEntryRequest) (*grpc_common_go.Success, error) {
+	log.Debug().Str("organizationId", entry.OrganizationId).
+		Str("networkId", entry.NetworkId).
 		Str("fqdn", entry.Fqdn).
 		Str("ip", entry.Ip).Msg("add dns entry")
-	err := entities.ValidFQDN(entry)
+
+	aux := entities.AddDNSRequestToEntry(entry)
+	err := entities.ValidFQDN(aux)
 	if err != nil {
 		log.Error().Msgf("Invalid FQDN: %s", err.Error())
 		return nil, conversions.ToGRPCError(err)
@@ -44,10 +64,12 @@ func (h * Handler) AddDNSEntry (ctx context.Context, entry *grpc_network_go.DNSE
 	return &grpc_common_go.Success{}, nil
 }
 
-func (h * Handler) DeleteDNSEntry (ctx context.Context, entry *grpc_network_go.DNSEntry) (*grpc_common_go.Success, error) {
-	log.Debug().Str("networkId", entry.NetworkId).
+func (h * Handler) DeleteDNSEntry (ctx context.Context, entry *grpc_network_go.DeleteDNSEntryRequest) (*grpc_common_go.Success, error) {
+	log.Debug().Str("organizationId", entry.OrganizationId).
 		Str("fqdn", entry.Fqdn).Msg("delete dns entry")
-	err := entities.ValidFQDN(entry)
+
+	aux := entities.DeleteDNSRequestToEntry(entry)
+	err := entities.ValidFQDN(aux)
 	if err != nil {
 		log.Error().Msgf("Invalid FQDN: %s", err.Error())
 		return nil, conversions.ToGRPCError(err)

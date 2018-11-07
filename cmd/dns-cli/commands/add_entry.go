@@ -14,6 +14,8 @@ import (
 
 // GRPC server address
 var addEntryServer string
+// Organization ID
+var addEntryOrganizationId string
 // Network ID
 var addEntryNetworkId string
 // FQDN
@@ -34,9 +36,11 @@ var addEntryCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(addEntryCmd)
 	addEntryCmd.Flags().StringVar(&addEntryServer, "server", "localhost:8000", "Networking manager server URL")
+	addEntryCmd.Flags().StringVar(&addEntryOrganizationId, "orgid", "", "Organization ID")
 	addEntryCmd.Flags().StringVar(&addEntryNetworkId, "netid", "", "ID of the network in which the DNS entry will be added")
 	addEntryCmd.Flags().StringVar(&addEntryFqdn, "fqdn", "", "FQDN of the DNS entry")
 	addEntryCmd.Flags().StringVar(&addEntryIp, "ip", "", "IP of the DNS entry")
+	addEntryCmd.MarkFlagRequired("orgid")
 	addEntryCmd.MarkFlagRequired("netid")
 	addEntryCmd.MarkFlagRequired("fqdn")
 	addEntryCmd.MarkFlagRequired("ip")
@@ -53,7 +57,8 @@ func addEntry() {
 
 	client := grpc_network_go.NewDNSClient(conn)
 
-	request := grpc_network_go.DNSEntry{
+	request := grpc_network_go.AddDNSEntryRequest{
+		OrganizationId: addEntryOrganizationId,
 		NetworkId: addEntryNetworkId,
 		Fqdn: addEntryFqdn,
 		Ip: addEntryIp,
