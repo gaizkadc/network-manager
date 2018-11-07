@@ -18,6 +18,8 @@ type Config struct {
 	ZTUrl string
 	// ZT access token
 	ZTAccessToken string
+	// Consul DNS URL
+	DNSUrl string
 }
 
 func (conf * Config) Validate() derrors.Error {
@@ -32,4 +34,5 @@ func (conf *Config) Print() {
 	log.Info().Str("sm", conf.SystemModelURL).Msg("SM URL")
 	log.Info().Str("zturl", conf.ZTUrl).Msg("ZT URL")
 	log.Info().Str("ztaccesstoken", conf.ZTAccessToken).Msg("ZT Access Token")
+	log.Info().Str("dnsurl", conf.DNSUrl).Msg("Consul DNS URL")
 }

@@ -1,36 +1,14 @@
+/*
+ * Copyright (C) 2018 Nalej - All Rights Reserved
+ */
+
 package zt
 
 import (
 	"fmt"
 	"github.com/nalej/derrors"
-	"github.com/nalej/dhttp"
 	"github.com/rs/zerolog/log"
 )
-
-type ClientZT struct {
-	client dhttp.Client
-}
-
-
-func NewZTClient(url string, accessToken string) (*ClientZT, error) {
-	log.Debug().Msgf("connecting to %s", url)
-
-	conf, err := dhttp.NewRestURLConfig(url)
-
-	if err != nil {
-		log.Error().Msgf("%s",err.Error())
-		log.Error().Err(err).Msg("error creating new ZTClient")
-		return nil, err
-	}
-
-	conf.Headers = map[string]string{
-		"X-ZT1-Auth": accessToken,
-	}
-
-	client := dhttp.NewClientSling(conf)
-
-	return  &ClientZT{client: client,}, nil
-}
 
 // Constants
 const (
@@ -41,19 +19,6 @@ const (
 	networkDetailPath = networkPath + "/%s"
 	PeerAddressLength = 10
 )
-
-func (ztc *ClientZT) GetStatus() (*PeerStatus, derrors.Error) {
-	result := PeerStatus{}
-	response := ztc.client.Get("/status", &result)
-
-	log.Debug().Msgf("show the thing %d",response.Status)
-	if response.Error != nil {
-		log.Error().Err(response.Error).Msg("error getting status")
-		return nil, response.Error
-	}
-
-	return &result, nil
-}
 
 // Add a ZeroTier network to the controller
 //   params:

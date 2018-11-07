@@ -30,6 +30,7 @@ func init() {
 	addNetworkCmd.Flags().StringVar(&addNetworkServer, "server", "localhost:8000", "Networking manager server URL")
 	addNetworkCmd.Flags().StringVar(&addNetworkName, "name", "mynetwork", "Name of the network to be added")
 	addNetworkCmd.Flags().StringVar(&addNetworkOrgId, "orgid", "", "Organization ID")
+	addNetworkCmd.MarkFlagRequired("orgid")
 }
 
 

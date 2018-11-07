@@ -4,6 +4,7 @@ import (
 	"github.com/nalej/derrors"
 	"github.com/nalej/dhttp"
 	"github.com/nalej/network-manager/internal/pkg/entities"
+	"github.com/rs/zerolog/log"
 	"time"
 )
 
@@ -59,6 +60,30 @@ func (n *ZTNetwork) ToNetwork (organizationId string) entities.Network {
 	}
 }
 
+type ClientZT struct {
+	client dhttp.Client
+}
+
+
+func NewZTClient(url string, accessToken string) (*ClientZT, derrors.Error) {
+	log.Debug().Msgf("connecting to %s", url)
+
+	conf, err := dhttp.NewRestURLConfig(url)
+
+	if err != nil {
+		log.Error().Msgf("%s",err.Error())
+		log.Error().Err(err).Msg("error creating new ZTClient")
+		return nil, err
+	}
+
+	conf.Headers = map[string]string{
+		"X-ZT1-Auth": accessToken,
+	}
+
+	client := dhttp.NewClientSling(conf)
+
+	return  &ClientZT{client: client,}, nil
+}
 
 type PeerNC struct {
 	client dhttp.Client
@@ -138,31 +163,15 @@ type PeerStatus struct {
 	VersionRev int `json:"versionRev"`
 }
 
-type Config struct {
-	// Use ZeroTier Central on https://my.zerotier.com. This also implies a
-	// different API
-	Central bool
+func (ztc *ClientZT) GetStatus() (*PeerStatus, derrors.Error) {
+	result := PeerStatus{}
+	response := ztc.client.Get("/status", &result)
 
-	// Address of Network Controller - ignored when Central is true
-	Address string
+	log.Debug().Msgf("show the thing %d",response.Status)
+	if response.Error != nil {
+		log.Error().Err(response.Error).Msg("error getting status")
+		return nil, response.Error
+	}
 
-	// Either API token for ZeroTier Central, or authentication token for
-	// network controller
-	Token string
-}
-
-// Pre-defined values to be used for pointers
-func True() *bool {
-	val := true
-	return &val
-}
-func False() *bool {
-	val := false
-	return &val
-}
-func Zero() *int {
-	return Int(0)
-}
-func Int(val int) *int {
-	return &val
+	return &result, nil
 }
