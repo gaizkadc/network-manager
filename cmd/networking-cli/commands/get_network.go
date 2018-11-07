@@ -30,6 +30,8 @@ func init() {
 	getNetworkCmd.Flags().StringVar(&getNetworkServer, "server", "localhost:8000", "Networking manager server URL")
 	getNetworkCmd.Flags().StringVar(&getNetworkId, "netid", "", "Networking ID")
 	getNetworkCmd.Flags().StringVar(&getNetworkOrgId, "orgid", "", "Organization ID")
+	getNetworkCmd.MarkFlagRequired("netid")
+	getNetworkCmd.MarkFlagRequired("orgid")
 }
 
 

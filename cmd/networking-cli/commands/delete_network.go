@@ -30,6 +30,8 @@ func init() {
 	delNetworkCmd.Flags().StringVar(&delNetworkServer, "server", "localhost:8000", "Networking manager server URL")
 	delNetworkCmd.Flags().StringVar(&delNetworkId, "netid", "", "Network ID")
 	delNetworkCmd.Flags().StringVar(&delNetworkOrgId, "orgid", "", "Organization ID")
+	delNetworkCmd.MarkFlagRequired("netid")
+	delNetworkCmd.MarkFlagRequired("orgid")
 }
 
 

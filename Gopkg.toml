@@ -8,7 +8,7 @@
 
 [[constraint]]
     name="github.com/nalej/grpc-network-go"
-    version="v0.0.1"
+    version="v0.0.5"
 
 [[constraint]]
     name="github.com/nalej/derrors"
@@ -25,6 +25,10 @@
 [[constraint]]
     name="github.com/onsi/gomega"
     version="v1.4.2"
+
+[[constraint]]
+    name="github.com/hashicorp/consul"
+    version="v1.3.0"
 
 [[override]]
   source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"

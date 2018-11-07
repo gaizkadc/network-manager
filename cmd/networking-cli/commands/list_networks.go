@@ -28,6 +28,7 @@ func init() {
 	rootCmd.AddCommand(listNetworksCmd)
 	listNetworksCmd.Flags().StringVar(&listNetworksServer, "server", "localhost:8000", "Networking manager server URL")
 	listNetworksCmd.Flags().StringVar(&listNetworksOrgId, "orgid", "", "Organization ID")
+	listNetworksCmd.MarkFlagRequired("orgid")
 }
 
 

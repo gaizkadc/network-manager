@@ -85,6 +85,7 @@ func (h *Handler) ListNetworks(ctx context.Context, organizationID *grpc_organiz
 	log.Debug().Str("organizationID", organizationID.OrganizationId).Msg("list networks")
 	err := entities.ValidOrganizationId(organizationID)
 	if err != nil {
+		log.Error().Msg("Unable to retrieve network list from the system")
 		return nil, conversions.ToGRPCError(err)
 	}
 
@@ -95,7 +96,7 @@ func (h *Handler) ListNetworks(ctx context.Context, organizationID *grpc_organiz
 		foundNetworks[i] = n.ToGRPC()
 	}
 
-	grpcNetworkList := grpc_network_go.NetworkList{Networks:foundNetworks }
+	grpcNetworkList := grpc_network_go.NetworkList{Networks: foundNetworks}
 
 	return &grpcNetworkList, nil
 }
