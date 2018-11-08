@@ -17,6 +17,7 @@ const (
 	networkDelPath = "/controller/network/%s"
 	networkPath = controllerPath + "/network"
 	networkDetailPath = networkPath + "/%s"
+	networkAuthMemberPath = networkPath + "/%s" + "/member" + "/%s"
 	PeerAddressLength = 10
 )
 
@@ -28,7 +29,7 @@ const (
 //     Error, if there is an internal error.
 // The entries marked [rw] can be set during creation. From those,
 // only "name" is required.
-func (ztc *ClientZT) Add(entity *ZTNetwork) (*ZTNetwork, derrors.Error) {
+func (ztc *ZTClient) Add(entity *ZTNetwork) (*ZTNetwork, derrors.Error) {
 	// Get Controller ZT address, as that's needed to create the proper
 	status, err := ztc.GetStatus()
 
@@ -59,7 +60,7 @@ func (ztc *ClientZT) Add(entity *ZTNetwork) (*ZTNetwork, derrors.Error) {
 //   returns:
 //     The network.
 //     Error, if there is an internal error.
-func (ztc *ClientZT) Get(networkID string) (*ZTNetwork, derrors.Error) {
+func (ztc *ZTClient) Get(networkID string) (*ZTNetwork, derrors.Error) {
 	// Get endpoint
 	path := fmt.Sprintf(networkDetailPath, networkID)
 
@@ -78,7 +79,7 @@ func (ztc *ClientZT) Get(networkID string) (*ZTNetwork, derrors.Error) {
 //     entity The Network to be deleted
 //   returns: .
 //     Error, if there is an internal error.
-func (ztc *ClientZT) Delete(entity *ZTNetwork) derrors.Error {
+func (ztc *ZTClient) Delete(entity *ZTNetwork) derrors.Error {
 	// Get Controller ZT address, as that's needed to create the proper
 	status, err := ztc.GetStatus()
 
@@ -110,8 +111,7 @@ func (ztc *ClientZT) Delete(entity *ZTNetwork) derrors.Error {
 //   returns:
 //     The list of networks.
 //     Error, if there is an internal error.
-func (ztc *ClientZT) List(organizationID string) ([]ZTNetwork, derrors.Error) {
-
+func (ztc *ZTClient) List(organizationID string) ([]ZTNetwork, derrors.Error) {
 	// Send get network request to controller
 	networkList := make ([]string, 0)
 	response := ztc.client.Get(networkPath, &networkList)
@@ -130,4 +130,33 @@ func (ztc *ClientZT) List(organizationID string) ([]ZTNetwork, derrors.Error) {
 		networks[i] = *converted
 	}
 	return networks, nil
+}
+
+// Authorize a member to join a network
+//	params:
+//		Network ID
+//		Member ID
+//	returns:
+//		Error, if there's one
+func (ztc *ZTClient) Authorize (networkId string, memberId string) derrors.Error {
+	// Create new authorized member
+	member := &ZTMember{
+		ID: memberId,
+		Nwid: networkId,
+		Authorized: True(),
+	}
+
+	// Form path of the request
+	path := fmt.Sprintf(networkAuthMemberPath, networkId, memberId)
+
+	// Create empty member
+	output := &ZTMember{}
+
+	// Send request to the controller
+	request := ztc.client.Post(path, member, output)
+	if request.Error != nil {
+		return derrors.NewNotFoundError("Error authorizing member", request.Error).WithParams(networkId, memberId)
+	}
+
+	return nil
 }

@@ -10,10 +10,13 @@ import (
 	"github.com/nalej/grpc-organization-go"
 )
 
-const emptyOrganizationId = "organization_id cannot be empty"
-const emptyNetworkId = "network_id cannot be empty"
-const emptyNetworkName = "network_name cannot be empty"
-const emptyFQDN = "FQDN cannot be empty"
+const (
+	emptyOrganizationId = "organization_id cannot be empty"
+	emptyNetworkId      = "network_id cannot be empty"
+	emptyNetworkName    = "network_name cannot be empty"
+	emptyFQDN           = "FQDN cannot be empty"
+	emptyMemberId       = "Member ID cannot be empty"
+)
 
 func ValidAddNetworkRequest (addNetworkRequest *grpc_network_go.AddNetworkRequest) derrors.Error {
 	if addNetworkRequest.OrganizationId == "" {
@@ -48,8 +51,24 @@ func ValidFQDN (fqdn *grpc_network_go.DNSEntry) derrors.Error {
 func ValidDeleteNetworkRequest (deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) derrors.Error {
 	if deleteNetworkRequest.OrganizationId == "" {
 		return derrors.NewInvalidArgumentError(emptyOrganizationId)
-	} else if deleteNetworkRequest.NetworkId == "" {
+	}
+	if deleteNetworkRequest.NetworkId == "" {
 		return derrors.NewInvalidArgumentError(emptyNetworkId)
+	}
+	return nil
+}
+
+func ValidAuthorizeMemberRequest (authMemberRequest *grpc_network_go.AuthorizeMemberRequest) derrors.Error {
+	if authMemberRequest.OrganizationId == "" {
+		return derrors.NewInvalidArgumentError(emptyOrganizationId)
+	}
+
+	if authMemberRequest.NetworkId == "" {
+		return derrors.NewInvalidArgumentError(emptyNetworkId)
+	}
+
+	if authMemberRequest.MemberId == "" {
+		return derrors.NewInvalidArgumentError(emptyMemberId)
 	}
 
 	return nil
