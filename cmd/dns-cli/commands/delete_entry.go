@@ -54,11 +54,11 @@ func deleteEntry() {
 		Fqdn:      deleteEntryFqdn,
 	}
 
-	deletedEntry, err := client.DeleteDNSEntry(context.Background(), &request)
+	_, err = client.DeleteDNSEntry(context.Background(), &request)
 	if err != nil {
 		log.Error().Err(err).Msgf("error deleting dns register %s", deleteEntryFqdn)
 		return
 	}
 
-	log.Info().Msgf("%s", deletedEntry.String())
+	log.Info().Msg("OK")
 }

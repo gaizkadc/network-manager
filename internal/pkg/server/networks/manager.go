@@ -19,7 +19,7 @@ import (
 type Manager struct {
 	//NetworkProvider network.Provider
 	OrganizationClient grpc_organization_go.OrganizationsClient
-	ZTClient *zt.ClientZT
+	ZTClient *zt.ZTClient
 }
 
 // NewManager creates a new manager.
@@ -137,4 +137,21 @@ func (m * Manager) ListNetworks(organizationId *grpc_organization_go.Organizatio
 	}
 
 	return networkList, nil
+}
+
+// Authorize a member to join a network
+func (m * Manager) AuthorizeMember(authorizeMemberRequest *grpc_network_go.AuthorizeMemberRequest) derrors.Error {
+	// Check if organization exists
+	_, err := m.OrganizationClient.GetOrganization(context.Background(),
+		&grpc_organization_go.OrganizationId{OrganizationId:  authorizeMemberRequest.OrganizationId,})
+	if err != nil {
+		return derrors.NewNotFoundError("invalid organizationID", err)
+	}
+
+	err = m.ZTClient.Authorize(authorizeMemberRequest.NetworkId, authorizeMemberRequest.MemberId)
+	if err != nil {
+		return derrors.NewNotFoundError("Unable to authorize member", err)
+	}
+
+	return nil
 }

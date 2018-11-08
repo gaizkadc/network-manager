@@ -25,7 +25,7 @@ func NewHandler(manager Manager) *Handler{
 // AddNetwork adds a network to the system.
 func (h *Handler) AddNetwork (ctx context.Context, addNetworkRequest *grpc_network_go.AddNetworkRequest) (*grpc_network_go.Network, error) {
 	log.Debug().Str("organizationID", addNetworkRequest.OrganizationId).
-		Str("network_name", addNetworkRequest.Name).Msg("add network")
+		Str("networkName", addNetworkRequest.Name).Msg("add network")
 	err := entities.ValidAddNetworkRequest(addNetworkRequest)
 	if err != nil {
 		return nil, conversions.ToGRPCError(err)
@@ -43,7 +43,7 @@ func (h *Handler) AddNetwork (ctx context.Context, addNetworkRequest *grpc_netwo
 // GetNetwork retrieves the network information.
 func (h * Handler) GetNetwork (ctx context.Context, networkID *grpc_network_go.NetworkId) (*grpc_network_go.Network, error){
 	log.Debug().Str("organizationID", networkID.OrganizationId).
-		Str("network_id", networkID.NetworkId).Msg("get network")
+		Str("networkID", networkID.NetworkId).Msg("get network")
 	err := entities.ValidNetworkId(networkID)
 	if err != nil {
 		return nil, conversions.ToGRPCError(err)
@@ -53,7 +53,7 @@ func (h * Handler) GetNetwork (ctx context.Context, networkID *grpc_network_go.N
 	if err != nil {
 		return nil, conversions.ToGRPCError(err)
 	}
-	log.Debug().Str("networkID", network.NetworkId).Msg("network retrieved")
+	log.Debug().Str("networkID", network.NetworkId).Msg("get network")
 
 	return network.ToGRPC(), nil
 }
@@ -61,7 +61,7 @@ func (h * Handler) GetNetwork (ctx context.Context, networkID *grpc_network_go.N
 // DeleteNetwork deletes a network from the system.
 func (h * Handler) DeleteNetwork (ctx context.Context, deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) (*grpc_common_go.Success, error) {
 	log.Debug().Str("organizationID", deleteNetworkRequest.OrganizationId).
-		Str("network_id", deleteNetworkRequest.NetworkId).Msg("get network")
+		Str("networkID", deleteNetworkRequest.NetworkId).Msg("delete network")
 	err := entities.ValidDeleteNetworkRequest(deleteNetworkRequest)
 	if err != nil {
 		return nil, conversions.ToGRPCError(err)
@@ -99,4 +99,26 @@ func (h *Handler) ListNetworks(ctx context.Context, organizationID *grpc_organiz
 	grpcNetworkList := grpc_network_go.NetworkList{Networks: foundNetworks}
 
 	return &grpcNetworkList, nil
+}
+
+func (h * Handler) AuthorizeMember (ctx context.Context, authorizeMemberRequest *grpc_network_go.AuthorizeMemberRequest) (*grpc_common_go.Success, error) {
+	log.Debug().Str("organizationID", authorizeMemberRequest.OrganizationId).
+		Str("networkID", authorizeMemberRequest.NetworkId).
+		Str("memberID", authorizeMemberRequest.MemberId).Msg("authorize member")
+
+	// Validation
+	err := entities.ValidAuthorizeMemberRequest(authorizeMemberRequest)
+	if err != nil {
+		log.Error().Msg("Unable to validate member authorization request")
+		return nil, conversions.ToGRPCError(err)
+	}
+
+	// Request
+	err = h.Manager.AuthorizeMember(authorizeMemberRequest)
+	if err != nil {
+		log.Error().Msgf("Unable to authorize member %s", authorizeMemberRequest.MemberId)
+		return nil, conversions.ToGRPCError(err)
+	}
+
+	return &grpc_common_go.Success{}, nil
 }

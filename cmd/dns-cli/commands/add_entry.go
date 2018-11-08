@@ -64,11 +64,11 @@ func addEntry() {
 		Ip: addEntryIp,
 	}
 
-	addedEntry, err := client.AddDNSEntry(context.Background(), &request)
+	_, err = client.AddDNSEntry(context.Background(), &request)
 	if err != nil {
 		log.Error().Err(err).Msgf("error adding dns register %s", addEntryNetworkId)
 		return
 	}
 
-	log.Info().Msgf("%s",addedEntry.String())
+	log.Info().Msg("OK")
 }

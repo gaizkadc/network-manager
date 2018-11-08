@@ -60,12 +60,12 @@ func (n *ZTNetwork) ToNetwork (organizationId string) entities.Network {
 	}
 }
 
-type ClientZT struct {
+type ZTClient struct {
 	client dhttp.Client
 }
 
 
-func NewZTClient(url string, accessToken string) (*ClientZT, derrors.Error) {
+func NewZTClient(url string, accessToken string) (*ZTClient, derrors.Error) {
 	log.Debug().Msgf("connecting to %s", url)
 
 	conf, err := dhttp.NewRestURLConfig(url)
@@ -82,7 +82,7 @@ func NewZTClient(url string, accessToken string) (*ClientZT, derrors.Error) {
 
 	client := dhttp.NewClientSling(conf)
 
-	return  &ClientZT{client: client,}, nil
+	return  &ZTClient{client: client,}, nil
 }
 
 type PeerNC struct {
@@ -163,7 +163,7 @@ type PeerStatus struct {
 	VersionRev int `json:"versionRev"`
 }
 
-func (ztc *ClientZT) GetStatus() (*PeerStatus, derrors.Error) {
+func (ztc *ZTClient) GetStatus() (*PeerStatus, derrors.Error) {
 	result := PeerStatus{}
 	response := ztc.client.Get("/status", &result)
 
@@ -174,4 +174,44 @@ func (ztc *ClientZT) GetStatus() (*PeerStatus, derrors.Error) {
 	}
 
 	return &result, nil
+}
+
+type ZTMember struct {
+	// Member's 10-digit ZeroTier address [ro]
+	ID  string `json:"id,omitempty"`
+	// Member's 10-digit ZeroTier address [ro]
+	Address string `json:"address,omitempty"`
+	// Object type on controller ("member") [ro]
+	ObjType string `json:"objtype,omitempty"`
+	// 16-digit network ID [ro]
+	Nwid string `json:"nwid,omitempty"`
+	// Current clock, ms since epoch [ro]
+	Clock int `json:"clock,omitempty"`
+	// Time member was first created [ro]
+	CreationTime int `json:"creationTime,omitempty"`
+	// Time config was last modified [ro]
+	LastModified int `json:"lastModified,omitempty"`
+	// Member record revision counter [ro]
+	Revision *int `json:"revision,omitempty"`
+	// Is member authorized? (for private networks) [rw]
+	Authorized *bool `json:"authorized,omitempty"`
+	// Time member was last authorized on network [ro]
+	LastAuthorizedTime *int `json:"lastAuthorizedTime,omitempty"`
+	// Time member was last deauthorized on network [ro]
+	LastDeauthorizedTime *int `json:"lastDeauthorizedTime,omitempty"`
+	// Member is able to bridge to other Ethernet nets [rw]
+	ActiveBridge *bool `json:"activeBridge,omitempty"`
+	// Member's public ZeroTier identity (if known)
+	Identity string `json:"identity,omitempty"`
+	// Managed IP address assignments [rw]
+	IpAssignments []string `json:"ipAssignments,omitempty"`
+	// If true do not auto-assign IPv4 or IPv6 addresses, overriding network settings [rw]
+	NoAutoAssignIps *bool `json:"noAutoAssignIps,omitempty"`
+	// Member revision counter [ro]
+	MemberRevision *int `json:"memberRevision,omitempty"`
+}
+
+func True() *bool {
+	val := true
+	return &val
 }

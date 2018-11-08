@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2018 Nalej - All Rights Reserved
+ */
+
 package commands
 
 import (
@@ -50,11 +54,11 @@ func delNetwork() {
 		OrganizationId: delNetworkOrgId,
 	}
 
-	deletedNetwork, err := client.DeleteNetwork(context.Background(), &request)
+	_, err = client.DeleteNetwork(context.Background(), &request)
 	if err != nil {
 		log.Error().Err(err).Msgf("error deleting network %s", delNetworkId)
 		return
 	}
 
-	log.Info().Msgf("%s", deletedNetwork.String())
+	log.Info().Msg("OK")
 }
