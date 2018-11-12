@@ -44,9 +44,7 @@ func (m * Manager) ListDNSEntries (organizationId *grpc_organization_go.Organiza
 
 // AddDNSEntry
 func (m * Manager) AddDNSEntry (entry *grpc_network_go.AddDNSEntryRequest) derrors.Error {
-	aux := entities.DNSEntryFromGRPC(entry)
-	asr := aux.ToConsulAPI()
-	err := m.client.Add(asr)
+	err := m.client.Add(entry.Fqdn, entry.Ip)
 
 	if err != nil {
 		log.Error().Msg("Unable to add DNS entry to the system")

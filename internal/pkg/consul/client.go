@@ -26,8 +26,11 @@ func NewConsulClient(address string) (*ConsulClient, derrors.Error) {
 	return &ConsulClient{client: *client,}, nil
 }
 
-func (a *ConsulClient) Add (entry *api.AgentServiceRegistration) derrors.Error {
-
+func (a *ConsulClient) Add (fqdn string, ip string) derrors.Error {
+	entry := &api.AgentServiceRegistration{
+		Name: fqdn,
+		Address: ip,
+	}
 	err := a.client.Agent().ServiceRegister(entry)
 
 	if err != nil {
