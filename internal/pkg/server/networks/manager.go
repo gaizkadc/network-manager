@@ -49,15 +49,7 @@ func (m * Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkReque
 	}
 
 	// use zt client to add network
-	config := zt.ZTNetwork{
-		Name: addNetworkRequest.Name,
-		V6AssignMode: &zt.V6AssignMode{
-			Zt: true,
-			SixPlane: true,
-			Rfc4193: true,
-		},
-	}
-	ztNetwork, err := m.ZTClient.Add(&config)
+	ztNetwork, err := m.ZTClient.Add(addNetworkRequest.Name, addNetworkRequest.OrganizationId)
 
 	if err != nil {
 		return nil, derrors.NewGenericError("Cannot add ZeroTier network", err)

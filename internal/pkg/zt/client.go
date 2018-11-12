@@ -7,6 +7,7 @@ package zt
 import (
 	"fmt"
 	"github.com/nalej/derrors"
+	"github.com/nalej/network-manager/internal/pkg/entities"
 	"github.com/rs/zerolog/log"
 )
 
@@ -29,7 +30,10 @@ const (
 //     Error, if there is an internal error.
 // The entries marked [rw] can be set during creation. From those,
 // only "name" is required.
-func (ztc *ZTClient) Add(entity *ZTNetwork) (*ZTNetwork, derrors.Error) {
+
+//func (ztc *ZTClient) Add(entity *ZTNetwork) (*ZTNetwork, derrors.Error) {
+func (ztc *ZTClient) Add(networkName string, organizationId string) (*ZTNetwork, derrors.Error) {
+
 	// Get Controller ZT address, as that's needed to create the proper
 	status, err := ztc.GetStatus()
 
@@ -47,31 +51,15 @@ func (ztc *ZTClient) Add(entity *ZTNetwork) (*ZTNetwork, derrors.Error) {
 
 	// Send create network request to controller
 	network := &ZTNetwork{}
+	entity := &entities.Network{
+		NetworkName: networkName,
+		OrganizationId: organizationId,
+	}
 	response := ztc.client.Post(path, entity, network)
 	if response.Error != nil {
 		return nil, derrors.NewInternalError("Error creating new network", response.Error)
 	}
 	return network, nil
-}
-
-// Get ZeroTier network information from the controller
-//   params:
-//     networkID The ZeroTier network ID to get detailed information for
-//   returns:
-//     The network.
-//     Error, if there is an internal error.
-func (ztc *ZTClient) Get(networkID string) (*ZTNetwork, derrors.Error) {
-	// Get endpoint
-	path := fmt.Sprintf(networkDetailPath, networkID)
-
-	// Send get network request to controller
-	network := &ZTNetwork{}
-	response := ztc.client.Get(path, network)
-	if response.Error != nil {
-		return nil, derrors.NewNotFoundError("Error retrieving network", response.Error).WithParams(networkID)
-	}
-
-	return response.Result.(*ZTNetwork), nil
 }
 
 // Delete a ZeroTier network from the controller
@@ -103,6 +91,26 @@ func (ztc *ZTClient) Delete(entity *ZTNetwork) derrors.Error {
 	}
 
 	return nil
+}
+
+// Get ZeroTier network information from the controller
+//   params:
+//     networkID The ZeroTier network ID to get detailed information for
+//   returns:
+//     The network.
+//     Error, if there is an internal error.
+func (ztc *ZTClient) Get(networkID string) (*ZTNetwork, derrors.Error) {
+	// Get endpoint
+	path := fmt.Sprintf(networkDetailPath, networkID)
+
+	// Send get network request to controller
+	network := &ZTNetwork{}
+	response := ztc.client.Get(path, network)
+	if response.Error != nil {
+		return nil, derrors.NewNotFoundError("Error retrieving network", response.Error).WithParams(networkID)
+	}
+
+	return response.Result.(*ZTNetwork), nil
 }
 
 // Retrieves a list of ZeroTier networks from an existing organization
