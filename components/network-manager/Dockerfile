@@ -9,6 +9,6 @@ FROM iron/go
 RUN mkdir /nalej
 
 # Now just add the binary
-COPY networking /nalej/
+COPY network-manager /nalej/
 
-ENTRYPOINT ["./nalej/networking"]
+ENTRYPOINT ["./nalej/network-manager"]
