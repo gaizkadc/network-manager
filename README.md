@@ -29,6 +29,9 @@ Keep in mind that the System-Model must be running to execute these commands.
 #### List networks:
 `$ ./bin/networking-cli list --orgid <organizationID> --consoleLogging --debug`
 
+#### Authorize member:
+`$ ./bin/networking-cli authorize --orgid <organizationID> --netid <networkID> --memberid <memberID> --consoleLogging --debug`
+
 ## DNS-Client
 
 Again, System-Model must be running to execute these commands.
