@@ -1,8 +1,8 @@
 # Network-Manager
 The Network-Manager is the component in charge of:
-* costumer and application network management, which includes network creation, deletion and listing.
+* costumer and application network management, which includes network creation, deletion, retrieval, and listing.
 * member authorization to join these networks.
-* DNS entry central management, which includes DNS entry creation, deletion and listing.
+* DNS entry central management, which includes DNS entry creation, deletion, and listing.
 
 The Network-Manager includes the following sub-components:
 * Network-Manager Server
@@ -22,6 +22,9 @@ Keep in mind that the System-Model must be running to execute these commands.
 
 #### Delete network:
 `$ ./bin/networking-cli delete --netid <networkID> --orgid <organizationID> --consoleLogging --debug`
+
+#### Get network:
+`$ ./bin/networking-cli get --netid <networkID> --orgid <organizationID> --consoleLogging --debug`
 
 #### List networks:
 `$ ./bin/networking-cli list --orgid <organizationID> --consoleLogging --debug`
