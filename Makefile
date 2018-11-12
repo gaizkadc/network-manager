@@ -3,7 +3,7 @@
 #
 
 # Name of the target applications to be built
-APPS=networking networking-cli dns-cli
+APPS=network-manager networking-cli dns-cli
 
 # Target directory to store binaries and results
 TARGET=bin

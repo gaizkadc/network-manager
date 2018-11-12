@@ -56,5 +56,9 @@ func listEntries() {
 		return
 	}
 
-	log.Info().Msgf("%s", listEntries.String())
+	if listEntries == nil {
+		log.Info().Msgf("%s", listEntries.String())
+	} else {
+		log.Info().Msg("No entries to list")
+	}
 }

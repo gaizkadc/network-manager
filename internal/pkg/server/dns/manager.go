@@ -23,30 +23,9 @@ func NewManager (consulClient *consul.ConsulClient) (* Manager, derrors.Error){
 	}, nil
 }
 
-// ListDNSEntries
-func (m * Manager) ListDNSEntries (organizationId *grpc_organization_go.OrganizationId) ([]entities.DNSEntry, derrors.Error) {
-	serviceList, err := m.client.List(organizationId.OrganizationId)
-
-	if err != nil {
-		log.Error().Msg("Unable to retrieve DNS list from the system")
-		return nil, derrors.NewGenericError(err.Error())
-	}
-
-	entryList := make ([]entities.DNSEntry, len(serviceList))
-	for i, n := range serviceList {
-		entryList[i].OrganizationId = organizationId.OrganizationId
-		entryList[i].Fqdn = n.Service
-		entryList[i].Ip = n.Address
-	}
-
-	return entryList, nil
-}
-
 // AddDNSEntry
 func (m * Manager) AddDNSEntry (entry *grpc_network_go.AddDNSEntryRequest) derrors.Error {
-	aux := entities.DNSEntryFromGRPC(entry)
-	asr := aux.ToConsulAPI()
-	err := m.client.Add(asr)
+	err := m.client.Add(entry.OrganizationId, entry.Fqdn, entry.Ip)
 
 	if err != nil {
 		log.Error().Msg("Unable to add DNS entry to the system")
@@ -66,4 +45,23 @@ func (m * Manager) DeleteDNSEntry (entry *grpc_network_go.DeleteDNSEntryRequest)
 	}
 
 	return nil
+}
+
+// ListDNSEntries
+func (m * Manager) ListDNSEntries (organizationId *grpc_organization_go.OrganizationId) ([]entities.DNSEntry, derrors.Error) {
+	serviceList, err := m.client.List(organizationId.OrganizationId)
+
+	if err != nil {
+		log.Error().Msg("Unable to retrieve DNS list from the system")
+		return nil, derrors.NewGenericError(err.Error())
+	}
+
+	entryList := make ([]entities.DNSEntry, len(serviceList))
+	for i, n := range serviceList {
+		entryList[i].OrganizationId = organizationId.OrganizationId
+		entryList[i].Fqdn = n.Service
+		entryList[i].Ip = n.Address
+	}
+
+	return entryList, nil
 }

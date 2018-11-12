@@ -26,8 +26,12 @@ func NewConsulClient(address string) (*ConsulClient, derrors.Error) {
 	return &ConsulClient{client: *client,}, nil
 }
 
-func (a *ConsulClient) Add (entry *api.AgentServiceRegistration) derrors.Error {
-
+func (a *ConsulClient) Add (organizationId string, fqdn string, ip string) derrors.Error {
+	entry := &api.AgentServiceRegistration{
+		Kind: api.ServiceKind(organizationId),
+		Name: fqdn,
+		Address: ip,
+	}
 	err := a.client.Agent().ServiceRegister(entry)
 
 	if err != nil {
@@ -50,7 +54,6 @@ func (a *ConsulClient) Delete (serviceID string) derrors.Error {
 }
 
 func (a *ConsulClient) List (serviceKind string) ([]Service, derrors.Error) {
-
 	services, err := a.client.Agent().Services()
 
 	if err != nil {
@@ -60,8 +63,10 @@ func (a *ConsulClient) List (serviceKind string) ([]Service, derrors.Error) {
 
 	serviceList := make ([]Service, 0)
 	for _, v := range services {
-		iserv := ServiceFromConsulAPI(v)
-		serviceList = append(serviceList, iserv)
+		intermediateServ := ServiceFromConsulAPI(v)
+		if string(v.Kind) == serviceKind {
+			serviceList = append(serviceList, intermediateServ)
+		}
 	}
 
 	return serviceList, nil

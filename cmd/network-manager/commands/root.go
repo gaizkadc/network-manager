@@ -18,7 +18,7 @@ var debugLevel bool
 var consoleLogging bool
 
 var rootCmd = &cobra.Command{
-	Use:   "networking",
+	Use:   "network-manager",
 	Short: "Networking",
 	Long:  `Networking`,
 	Version: "unknown-version",
