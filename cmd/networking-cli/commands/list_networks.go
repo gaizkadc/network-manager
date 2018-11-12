@@ -56,5 +56,9 @@ func listNetworks() {
 		return
 	}
 
-	log.Info().Msgf("%s",retrievedNetworkList.String())
+	if retrievedNetworkList == nil {
+		log.Info().Msgf("%s", retrievedNetworkList.String())
+	} else {
+		log.Info().Msg("No networks to list")
+	}
 }
