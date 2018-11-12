@@ -18,7 +18,7 @@ To launch the Network-Manager run:
 Keep in mind that the System-Model must be running to execute these commands.
 
 #### Add network:
-`$ ./bin/networking-cli add --name <networkName> --orgid <organizationID>`
+`$ ./bin/networking-cli add --name <networkName> --orgid <organizationID> --consoleLogging --debug`
 
 #### Delete network:
 `$ ./bin/networking-cli delete --netid <networkID> --orgid <organizationID> --consoleLogging --debug`
