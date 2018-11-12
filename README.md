@@ -12,7 +12,7 @@ The Network-Manager includes the following sub-components:
 ## Network-Manager Server
 To launch the Network-Manager run:
 
-`$ ./bin/networking run --ztaccesstoken <ztaccesstoken> --consoleLogging --debug`
+`$ ./bin/network-manager run --ztaccesstoken <ztaccesstoken> --consoleLogging --debug`
 
 ## Networking-Client
 Keep in mind that the System-Model must be running to execute these commands.

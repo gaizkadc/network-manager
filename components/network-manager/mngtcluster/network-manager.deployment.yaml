@@ -1,5 +1,5 @@
 ###
-# Application networking
+# Application network-manager
 ###
 
 kind: Deployment
@@ -7,8 +7,8 @@ apiVersion: apps/v1
 metadata:
   labels:
     cluster: management
-    component: networking
-  name: networking
+    component: network-manager
+  name: network-manager
   namespace: nalej
 spec:
   replicas: 1
@@ -16,16 +16,16 @@ spec:
   selector:
     matchLabels:
       cluster: management
-      component: networking
+      component: network-manager
   template:
     metadata:
       labels:
         cluster: management
-        component: networking
+        component: network-manager
     spec:
       containers:
       - name: example
-        image: nalej/networking:VERSION
+        image: nalej/network-manager:VERSION
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 2000
