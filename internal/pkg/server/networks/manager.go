@@ -60,6 +60,24 @@ func (m * Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkReque
 	return &toAdd, nil
 }
 
+// DeleteNetwork deletes a network from the system.
+func (m * Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) derrors.Error {
+	// Check if organization exists
+	_, err := m.OrganizationClient.GetOrganization(context.Background(),
+		&grpc_organization_go.OrganizationId{OrganizationId:  deleteNetworkRequest.OrganizationId,})
+	if err != nil {
+		return derrors.NewNotFoundError("invalid organizationID", err)
+	}
+
+	// Use zt client to delete network
+	err = m.ZTClient.Delete(deleteNetworkRequest.NetworkId, deleteNetworkRequest.OrganizationId)
+	if err != nil {
+		return derrors.NewGenericError("Cannot delete ZeroTier network", err)
+	}
+
+	return nil
+}
+
 // GetNetwork gets an existing network from the system.
 func (m * Manager) GetNetwork(networkId *grpc_network_go.NetworkId) (*entities.Network, derrors.Error) {
 
@@ -80,30 +98,6 @@ func (m * Manager) GetNetwork(networkId *grpc_network_go.NetworkId) (*entities.N
 	toReturn := ztNetwork.ToNetwork(networkId.OrganizationId)
 
 	return &toReturn, nil
-}
-
-// DeleteNetwork deletes a network from the system.
-func (m * Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) derrors.Error {
-	// Check if organization exists
-	_, err := m.OrganizationClient.GetOrganization(context.Background(),
-		&grpc_organization_go.OrganizationId{OrganizationId:  deleteNetworkRequest.OrganizationId,})
-	if err != nil {
-		return derrors.NewNotFoundError("invalid organizationID", err)
-	}
-
-	// retrieve network to be deleted
-	toBeDeleted, err := m.ZTClient.Get(deleteNetworkRequest.NetworkId)
-	if err != nil {
-		return derrors.NewNotFoundError("cannot retrieve network to be deleted", err)
-	}
-
-	// Use zt client to delete network
-	err = m.ZTClient.Delete(toBeDeleted)
-	if err != nil {
-		return derrors.NewGenericError("Cannot delete ZeroTier network", err)
-	}
-
-	return nil
 }
 
 // ListNetworks gets a list of existing networks from an organization.

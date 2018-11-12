@@ -30,8 +30,6 @@ const (
 //     Error, if there is an internal error.
 // The entries marked [rw] can be set during creation. From those,
 // only "name" is required.
-
-//func (ztc *ZTClient) Add(entity *ZTNetwork) (*ZTNetwork, derrors.Error) {
 func (ztc *ZTClient) Add(networkName string, organizationId string) (*ZTNetwork, derrors.Error) {
 
 	// Get Controller ZT address, as that's needed to create the proper
@@ -67,7 +65,8 @@ func (ztc *ZTClient) Add(networkName string, organizationId string) (*ZTNetwork,
 //     entity The Network to be deleted
 //   returns: .
 //     Error, if there is an internal error.
-func (ztc *ZTClient) Delete(entity *ZTNetwork) derrors.Error {
+//func (ztc *ZTClient) Delete(entity *ZTNetwork) derrors.Error {
+func (ztc *ZTClient) Delete(networkId string, organizationId string) derrors.Error {
 	// Get Controller ZT address, as that's needed to create the proper
 	status, err := ztc.GetStatus()
 
@@ -81,7 +80,12 @@ func (ztc *ZTClient) Delete(entity *ZTNetwork) derrors.Error {
 		return derrors.NewInvalidArgumentError("Invalid address in peer status").WithParams(status)
 	}
 
-	path := fmt.Sprintf(networkDelPath, entity.Nwid)
+	entity := &entities.Network{
+		NetworkId: networkId,
+		OrganizationId: organizationId,
+	}
+
+	path := fmt.Sprintf(networkDelPath, entity.NetworkId)
 	log.Debug().Msg(path)
 
 	// Send delete network request to controller
