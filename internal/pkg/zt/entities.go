@@ -60,30 +60,7 @@ func (n *ZTNetwork) ToNetwork (organizationId string) entities.Network {
 	}
 }
 
-type ZTClient struct {
-	client dhttp.Client
-}
 
-
-func NewZTClient(url string, accessToken string) (*ZTClient, derrors.Error) {
-	log.Debug().Msgf("connecting to %s", url)
-
-	conf, err := dhttp.NewRestURLConfig(url)
-
-	if err != nil {
-		log.Error().Msgf("%s",err.Error())
-		log.Error().Err(err).Msg("error creating new ZTClient")
-		return nil, err
-	}
-
-	conf.Headers = map[string]string{
-		"X-ZT1-Auth": accessToken,
-	}
-
-	client := dhttp.NewClientSling(conf)
-
-	return  &ZTClient{client: client,}, nil
-}
 
 type PeerNC struct {
 	client dhttp.Client
