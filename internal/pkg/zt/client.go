@@ -9,6 +9,7 @@ import (
 	"github.com/nalej/derrors"
 	"github.com/nalej/network-manager/internal/pkg/entities"
 	"github.com/rs/zerolog/log"
+    "github.com/nalej/dhttp"
 )
 
 // Constants
@@ -21,6 +22,33 @@ const (
 	networkAuthMemberPath = networkPath + "/%s" + "/member" + "/%s"
 	PeerAddressLength = 10
 )
+
+
+type ZTClient struct {
+    client dhttp.Client
+}
+
+
+func NewZTClient(url string, accessToken string) (*ZTClient, derrors.Error) {
+    log.Debug().Msgf("connecting to %s", url)
+
+    conf, err := dhttp.NewRestURLConfig(url)
+
+    if err != nil {
+        log.Error().Msgf("%s",err.Error())
+        log.Error().Err(err).Msg("error creating new ZTClient")
+        return nil, err
+    }
+
+    conf.Headers = map[string]string{
+        "X-ZT1-Auth": accessToken,
+    }
+
+    client := dhttp.NewClientSling(conf)
+
+    return  &ZTClient{client: client,}, nil
+}
+
 
 // Add a ZeroTier network to the controller
 //   params:
@@ -48,11 +76,20 @@ func (ztc *ZTClient) Add(networkName string, organizationId string) (*ZTNetwork,
 	path := fmt.Sprintf(networkAddPath, status.Address)
 
 	// Send create network request to controller
+
+
 	network := &ZTNetwork{}
-	entity := &entities.Network{
-		NetworkName: networkName,
-		OrganizationId: organizationId,
-	}
+
+	entity := &ZTNetwork{
+	    Name: networkName,
+	    V6AssignMode: &V6AssignMode{
+	        Zt: true,
+	        Rfc4193: true,
+	        SixPlane: true,
+        },
+    }
+
+
 	response := ztc.client.Post(path, entity, network)
 	if response.Error != nil {
 		return nil, derrors.NewInternalError("Error creating new network", response.Error)
