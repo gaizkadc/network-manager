@@ -1,0 +1,48 @@
+###
+# ZeroTier controller image
+###
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels:
+    cluster: management
+    component: zt-controller
+  name: zt-controller
+  namespace: nalej
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      cluster: management
+      component: zt-controller
+  template:
+    metadata:
+      labels:
+        cluster: management
+        component: zt-controller
+    spec:
+      containers:
+      - name: zt-controller
+        image: nalej/zt-controller:VERSION
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+          privileged: true
+          capabilities:
+            add:
+              - "NET_ADMIN"
+              - "SYS_ADMIN"
+        ports:
+        - name: api-port
+          containerPort: 9993
+        volumeMounts:
+          - mountPath: /dev/net/tun
+            name: dev-net-tun
+            readOnly: true
+      volumes:
+        - name: "dev-net-tun"
+          hostPath:
+            path: "/dev/net/tun"
+
