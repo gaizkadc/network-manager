@@ -3,7 +3,7 @@
 #
 
 # Name of the target applications to be built
-APPS=network-manager networking-cli dns-cli
+APPS=network-manager networking-cli dns-cli zt-controller
 
 # Target directory to store binaries and results
 TARGET=bin
@@ -84,14 +84,18 @@ build-linux: dep linux
 local:
 	$(info >>> Building ...)
 	for app in $(APPS); do \
+		if [ -d $(TARGET)/"$$app" ]; then \
             $(GOBUILD) $(LDFLAGS) -o $(TARGET)/"$$app" ./cmd/"$$app" ; \
+		fi ; \
 	done
 
 # Cross compilation to obtain a linux binary
 linux:
 	$(info >>> Bulding for Linux...)
 	for app in $(APPS); do \
-    	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(TARGET)/linux_amd64/"$$app" ./cmd/"$$app" ; \
+		if [ -d $(TARGET)/"$$app" ]; then \
+    		CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(TARGET)/linux_amd64/"$$app" ./cmd/"$$app" ; \
+		fi ; \
 	done
 
 yaml:
@@ -122,6 +126,9 @@ create-image:
         echo Create image of app $$app ; \
         if [ -f components/"$$app"/Dockerfile ]; then \
             mkdir -p $(TARGET)/images/"$$app" ; \
+            if [ -d components/"$$app"/dockerenv ]; then \
+            	cp -rv components/"$$app"/dockerenv $(TARGET)/linux_amd64/. ; \
+			fi ; \
             docker build --no-cache -t $(DOCKER_REPO)/"$$app":$(VERSION) -f components/"$$app"/Dockerfile $(TARGET)/linux_amd64 ; \
             docker save $(DOCKER_REPO)/"$$app" > $(TARGET)/images/"$$app"/image.tar ; \
             // docker rmi $(DOCKER_REPO)/"$$app":$(VERSION) ; \

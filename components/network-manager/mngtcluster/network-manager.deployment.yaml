@@ -26,8 +26,23 @@ spec:
       containers:
       - name: example
         image: nalej/network-manager:VERSION
+        env:
+          - name: ZT_ACCESS_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: zt-controller-auth
+                key: zt-access-token
         imagePullPolicy: IfNotPresent
+        args:
+          - "run"
+          - "--dnsurl"
+          - "http://dns-server-ui.nalej:80"
+          - "--sm"
+          - "system-model.nalej:8800"
+          - "--ztaccesstoken"
+          - "$(ZT_ACCESS_TOKEN)"
+          - "--zturl"
+          - "http://zt-controller.nalej:9993"
+          - "--debug"
         securityContext:
           runAsUser: 2000
-      imagePullSecrets:
-      - name: myregistrykey

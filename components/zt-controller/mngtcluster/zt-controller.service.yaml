@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: zt-controller
+  namespace: nalej
+  labels:
+    cluster: management
+    component: zt-controller
+spec:
+  selector:
+    cluster: management
+    component: zt-controller
+  type: ClusterIP
+  ports:
+  - protocol: TCP
+    port: 9993
+    targetPort: 9993
