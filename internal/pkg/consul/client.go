@@ -23,13 +23,13 @@ func NewConsulClient(address string) (*ConsulClient, derrors.Error) {
 		log.Error().Err(err).Msg("error creating new ConsulClient")
 		return nil, derrors.NewGenericError("error creating new ConsulClient", err)
 	}
-	return &ConsulClient{client: *client,}, nil
+	return &ConsulClient{client: *client}, nil
 }
 
-func (a *ConsulClient) Add (organizationId string, fqdn string, ip string) derrors.Error {
+func (a *ConsulClient) Add(organizationId string, fqdn string, ip string) derrors.Error {
 	entry := &api.AgentServiceRegistration{
-		Kind: api.ServiceKind(organizationId),
-		Name: fqdn,
+		Kind:    api.ServiceKind(organizationId),
+		Name:    fqdn,
 		Address: ip,
 	}
 	err := a.client.Agent().ServiceRegister(entry)
@@ -42,7 +42,7 @@ func (a *ConsulClient) Add (organizationId string, fqdn string, ip string) derro
 	return nil
 }
 
-func (a *ConsulClient) Delete (serviceID string) derrors.Error {
+func (a *ConsulClient) Delete(serviceID string) derrors.Error {
 	err := a.client.Agent().ServiceDeregister(serviceID)
 
 	if err != nil {
@@ -53,7 +53,7 @@ func (a *ConsulClient) Delete (serviceID string) derrors.Error {
 	return nil
 }
 
-func (a *ConsulClient) List (serviceKind string) ([]Service, derrors.Error) {
+func (a *ConsulClient) List(serviceKind string) ([]Service, derrors.Error) {
 	services, err := a.client.Agent().Services()
 
 	if err != nil {
@@ -61,7 +61,7 @@ func (a *ConsulClient) List (serviceKind string) ([]Service, derrors.Error) {
 		return nil, derrors.NewGenericError(err.Error())
 	}
 
-	serviceList := make ([]Service, 0)
+	serviceList := make([]Service, 0)
 	for _, v := range services {
 		intermediateServ := ServiceFromConsulAPI(v)
 		if string(v.Kind) == serviceKind {

@@ -86,7 +86,7 @@ build-linux: dep linux
 local:
 	$(info >>> Building ...)
 	for app in $(APPS); do \
-		if [ -d $(TARGET)/"$$app" ]; then \
+		if [ -d ./cmd/"$$app" ]; then \
             $(GOBUILD) $(LDFLAGS) -o $(TARGET)/"$$app" ./cmd/"$$app" ; \
 		fi ; \
 	done
@@ -95,7 +95,7 @@ local:
 linux:
 	$(info >>> Bulding for Linux...)
 	for app in $(APPS); do \
-		if [ -d $(TARGET)/"$$app" ]; then \
+		if [ -d ./cmd/"$$app" ]; then \
     		CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(TARGET)/linux_amd64/"$$app" ./cmd/"$$app" ; \
 		fi ; \
 	done
@@ -146,11 +146,11 @@ publish-image:
 
 	$(info >>> Publish images into Azure Container Registry ...)
 	for app in $(APPS); do \
-	    if [ -f $(TARGET)/images/"$$app"/image.tar ]; then \
+	    if [ $(shell docker images nalejregistry.azurecr.io/nalej/zt-controller:v0.1.0 -q | wc -l) == 1 ]; then \
 	        docker push $(DOCKER_REGISTRY)/$(DOCKER_REPO)/"$$app":$(VERSION) ; \
+			echo  Published image of app $$app ; \
 	    else \
 	        echo $$app has no image to be pushed ; \
 	    fi ; \
-   	    echo  Published image of app $$app ; \
     done ; \
     az logout ; \

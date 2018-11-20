@@ -5,25 +5,25 @@
 package networks
 
 import (
+	"context"
 	"github.com/nalej/grpc-common-go"
+	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-organization-go"
 	"github.com/nalej/grpc-utils/pkg/conversions"
 	"github.com/nalej/network-manager/internal/pkg/entities"
-	"github.com/nalej/grpc-network-go"
 	"github.com/rs/zerolog/log"
-	"context"
 )
 
 type Handler struct {
 	Manager Manager
 }
 
-func NewHandler(manager Manager) *Handler{
+func NewHandler(manager Manager) *Handler {
 	return &Handler{manager}
 }
 
 // AddNetwork adds a network to the system.
-func (h *Handler) AddNetwork (ctx context.Context, addNetworkRequest *grpc_network_go.AddNetworkRequest) (*grpc_network_go.Network, error) {
+func (h *Handler) AddNetwork(ctx context.Context, addNetworkRequest *grpc_network_go.AddNetworkRequest) (*grpc_network_go.Network, error) {
 	log.Debug().Str("organizationID", addNetworkRequest.OrganizationId).
 		Str("networkName", addNetworkRequest.Name).Msg("add network")
 	err := entities.ValidAddNetworkRequest(addNetworkRequest)
@@ -41,7 +41,7 @@ func (h *Handler) AddNetwork (ctx context.Context, addNetworkRequest *grpc_netwo
 }
 
 // GetNetwork retrieves the network information.
-func (h * Handler) GetNetwork (ctx context.Context, networkID *grpc_network_go.NetworkId) (*grpc_network_go.Network, error){
+func (h *Handler) GetNetwork(ctx context.Context, networkID *grpc_network_go.NetworkId) (*grpc_network_go.Network, error) {
 	log.Debug().Str("organizationID", networkID.OrganizationId).
 		Str("networkID", networkID.NetworkId).Msg("get network")
 	err := entities.ValidNetworkId(networkID)
@@ -59,7 +59,7 @@ func (h * Handler) GetNetwork (ctx context.Context, networkID *grpc_network_go.N
 }
 
 // DeleteNetwork deletes a network from the system.
-func (h * Handler) DeleteNetwork (ctx context.Context, deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) (*grpc_common_go.Success, error) {
+func (h *Handler) DeleteNetwork(ctx context.Context, deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) (*grpc_common_go.Success, error) {
 	log.Debug().Str("organizationID", deleteNetworkRequest.OrganizationId).
 		Str("networkID", deleteNetworkRequest.NetworkId).Msg("delete network")
 	err := entities.ValidDeleteNetworkRequest(deleteNetworkRequest)
@@ -91,7 +91,7 @@ func (h *Handler) ListNetworks(ctx context.Context, organizationID *grpc_organiz
 
 	networkList, err := h.Manager.ListNetworks(organizationID)
 
-	foundNetworks := make([]*grpc_network_go.Network,len(networkList))
+	foundNetworks := make([]*grpc_network_go.Network, len(networkList))
 	for i, n := range networkList {
 		foundNetworks[i] = n.ToGRPC()
 	}
@@ -101,7 +101,7 @@ func (h *Handler) ListNetworks(ctx context.Context, organizationID *grpc_organiz
 	return &grpcNetworkList, nil
 }
 
-func (h * Handler) AuthorizeMember (ctx context.Context, authorizeMemberRequest *grpc_network_go.AuthorizeMemberRequest) (*grpc_common_go.Success, error) {
+func (h *Handler) AuthorizeMember(ctx context.Context, authorizeMemberRequest *grpc_network_go.AuthorizeMemberRequest) (*grpc_common_go.Success, error) {
 	log.Debug().Str("organizationID", authorizeMemberRequest.OrganizationId).
 		Str("networkID", authorizeMemberRequest.NetworkId).
 		Str("memberID", authorizeMemberRequest.MemberId).Msg("authorize member")

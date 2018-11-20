@@ -16,7 +16,7 @@
 
 [[constraint]]
     name="github.com/nalej/dhttp"
-    version="v1.3.0"
+    version="v1.4.0"
 
 [[constraint]]
     name="github.com/onsi/ginkgo"

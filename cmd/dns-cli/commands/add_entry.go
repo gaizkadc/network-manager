@@ -6,20 +6,24 @@ package commands
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
 	"github.com/nalej/grpc-network-go"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 )
 
 // GRPC server address
 var addEntryServer string
+
 // Organization ID
 var addEntryOrganizationId string
+
 // Network ID
 var addEntryNetworkId string
+
 // FQDN
 var addEntryFqdn string
+
 // IP
 var addEntryIp string
 
@@ -46,12 +50,11 @@ func init() {
 	addEntryCmd.MarkFlagRequired("ip")
 }
 
-
 func addEntry() {
 
 	conn, err := grpc.Dial(addEntryServer, grpc.WithInsecure())
 
-	if err!=nil{
+	if err != nil {
 		log.Fatal().Err(err).Msgf("impossible to connect to server %s", addEntryServer)
 	}
 
@@ -59,9 +62,9 @@ func addEntry() {
 
 	request := grpc_network_go.AddDNSEntryRequest{
 		OrganizationId: addEntryOrganizationId,
-		NetworkId: addEntryNetworkId,
-		Fqdn: addEntryFqdn,
-		Ip: addEntryIp,
+		NetworkId:      addEntryNetworkId,
+		Fqdn:           addEntryFqdn,
+		Ip:             addEntryIp,
 	}
 
 	_, err = client.AddDNSEntry(context.Background(), &request)
