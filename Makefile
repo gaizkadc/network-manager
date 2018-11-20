@@ -146,11 +146,6 @@ publish-image:
 
 	$(info >>> Publish images into Azure Container Registry ...)
 	for app in $(APPS); do \
-	    if [ $(shell docker images nalejregistry.azurecr.io/nalej/zt-controller:v0.1.0 -q | wc -l) == 1 ]; then \
-	        docker push $(DOCKER_REGISTRY)/$(DOCKER_REPO)/"$$app":$(VERSION) ; \
-			echo  Published image of app $$app ; \
-	    else \
-	        echo $$app has no image to be pushed ; \
-	    fi ; \
+		docker push $(DOCKER_REGISTRY)/$(DOCKER_REPO)/"$$app":$(VERSION) || true ; \
     done ; \
     az logout ; \
