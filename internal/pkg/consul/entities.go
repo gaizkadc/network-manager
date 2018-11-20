@@ -15,8 +15,8 @@ type Service struct {
 	Address string
 }
 
-func ServiceFromConsulAPI (s *api.AgentService) Service {
-	return Service {
+func ServiceFromConsulAPI(s *api.AgentService) Service {
+	return Service{
 		Kind: s.Kind,
 		//ID: s.ID,
 		Service: s.Service,

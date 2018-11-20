@@ -6,15 +6,16 @@ package commands
 
 import (
 	"context"
+	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-organization-go"
 	"github.com/rs/zerolog/log"
-	"github.com/nalej/grpc-network-go"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 )
 
 // GRPC server address
 var listEntriesServer string
+
 // Organization ID
 var listEntriesOrganizationId string
 
@@ -35,18 +36,17 @@ func init() {
 	listEntriesCmd.MarkFlagRequired("orgid")
 }
 
-
 func listEntries() {
 
 	conn, err := grpc.Dial(listEntriesServer, grpc.WithInsecure())
 
-	if err!=nil{
+	if err != nil {
 		log.Fatal().Err(err).Msgf("impossible to connect to server %s", listEntriesServer)
 	}
 
 	client := grpc_network_go.NewDNSClient(conn)
 
-	request := grpc_organization_go.OrganizationId {
+	request := grpc_organization_go.OrganizationId{
 		OrganizationId: listEntriesOrganizationId,
 	}
 

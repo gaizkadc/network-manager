@@ -19,31 +19,31 @@ import (
 type Manager struct {
 	//NetworkProvider network.Provider
 	OrganizationClient grpc_organization_go.OrganizationsClient
-	ZTClient *zt.ZTClient
+	ZTClient           *zt.ZTClient
 }
 
 // NewManager creates a new manager.
-func NewManager (organizationConn *grpc.ClientConn, url string, accessToken string) (*Manager,error){
+func NewManager(organizationConn *grpc.ClientConn, url string, accessToken string) (*Manager, error) {
 	orgClient := grpc_organization_go.NewOrganizationsClient(organizationConn)
 	ztClient, err := zt.NewZTClient(url, accessToken)
 
 	if err != nil {
 		log.Error().Err(err).Msgf("impossible to create network for url %s", url)
-		return nil,err
+		return nil, err
 	}
 
-	return &Manager {
+	return &Manager{
 		OrganizationClient: orgClient,
-		ZTClient: ztClient,
+		ZTClient:           ztClient,
 	}, nil
 }
 
 // AddNetwork adds a new network to the system.
-func (m * Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkRequest) (*entities.Network, derrors.Error) {
+func (m *Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkRequest) (*entities.Network, derrors.Error) {
 
 	// Check if organization exists
 	_, err := m.OrganizationClient.GetOrganization(context.Background(),
-		&grpc_organization_go.OrganizationId{OrganizationId:  addNetworkRequest.OrganizationId,})
+		&grpc_organization_go.OrganizationId{OrganizationId: addNetworkRequest.OrganizationId})
 	if err != nil {
 		return nil, derrors.NewNotFoundError("invalid organizationID", err)
 	}
@@ -55,16 +55,16 @@ func (m * Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkReque
 		return nil, derrors.NewGenericError("Cannot add ZeroTier network", err)
 	}
 
-	 toAdd := ztNetwork.ToNetwork(addNetworkRequest.OrganizationId)
+	toAdd := ztNetwork.ToNetwork(addNetworkRequest.OrganizationId)
 
 	return &toAdd, nil
 }
 
 // DeleteNetwork deletes a network from the system.
-func (m * Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) derrors.Error {
+func (m *Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) derrors.Error {
 	// Check if organization exists
 	_, err := m.OrganizationClient.GetOrganization(context.Background(),
-		&grpc_organization_go.OrganizationId{OrganizationId:  deleteNetworkRequest.OrganizationId,})
+		&grpc_organization_go.OrganizationId{OrganizationId: deleteNetworkRequest.OrganizationId})
 	if err != nil {
 		return derrors.NewNotFoundError("invalid organizationID", err)
 	}
@@ -79,11 +79,11 @@ func (m * Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNet
 }
 
 // GetNetwork gets an existing network from the system.
-func (m * Manager) GetNetwork(networkId *grpc_network_go.NetworkId) (*entities.Network, derrors.Error) {
+func (m *Manager) GetNetwork(networkId *grpc_network_go.NetworkId) (*entities.Network, derrors.Error) {
 
 	// Check if organization exists
 	_, err := m.OrganizationClient.GetOrganization(context.Background(),
-		&grpc_organization_go.OrganizationId{OrganizationId:  networkId.OrganizationId,})
+		&grpc_organization_go.OrganizationId{OrganizationId: networkId.OrganizationId})
 	if err != nil {
 		return nil, derrors.NewNotFoundError("invalid organizationID", err)
 	}
@@ -101,11 +101,11 @@ func (m * Manager) GetNetwork(networkId *grpc_network_go.NetworkId) (*entities.N
 }
 
 // ListNetworks gets a list of existing networks from an organization.
-func (m * Manager) ListNetworks(organizationId *grpc_organization_go.OrganizationId) ([]entities.Network, derrors.Error) {
+func (m *Manager) ListNetworks(organizationId *grpc_organization_go.OrganizationId) ([]entities.Network, derrors.Error) {
 
 	// Check if organization exists
 	_, err := m.OrganizationClient.GetOrganization(context.Background(),
-		&grpc_organization_go.OrganizationId{OrganizationId:  organizationId.OrganizationId,})
+		&grpc_organization_go.OrganizationId{OrganizationId: organizationId.OrganizationId})
 	if err != nil {
 		return nil, derrors.NewNotFoundError("invalid organizationID", err)
 	}
@@ -126,10 +126,10 @@ func (m * Manager) ListNetworks(organizationId *grpc_organization_go.Organizatio
 }
 
 // Authorize a member to join a network
-func (m * Manager) AuthorizeMember(authorizeMemberRequest *grpc_network_go.AuthorizeMemberRequest) derrors.Error {
+func (m *Manager) AuthorizeMember(authorizeMemberRequest *grpc_network_go.AuthorizeMemberRequest) derrors.Error {
 	// Check if organization exists
 	_, err := m.OrganizationClient.GetOrganization(context.Background(),
-		&grpc_organization_go.OrganizationId{OrganizationId:  authorizeMemberRequest.OrganizationId,})
+		&grpc_organization_go.OrganizationId{OrganizationId: authorizeMemberRequest.OrganizationId})
 	if err != nil {
 		return derrors.NewNotFoundError("invalid organizationID", err)
 	}
