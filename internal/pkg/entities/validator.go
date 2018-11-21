@@ -16,7 +16,6 @@ const (
 	emptyNetworkName    = "network_name cannot be empty"
 	emptyFQDN           = "FQDN cannot be empty"
 	emptyMemberId       = "Member ID cannot be empty"
-	emptyZTAccessToken	= "ZT Access Token cannot be empty"
 )
 
 func ValidAddNetworkRequest(addNetworkRequest *grpc_network_go.AddNetworkRequest) derrors.Error {
@@ -72,12 +71,5 @@ func ValidAuthorizeMemberRequest(authMemberRequest *grpc_network_go.AuthorizeMem
 		return derrors.NewInvalidArgumentError(emptyMemberId)
 	}
 
-	return nil
-}
-
-func ValidZTAccessToken(ztAccessToken string) derrors.Error {
-	if ztAccessToken == "" {
-		return derrors.NewInvalidArgumentError(emptyZTAccessToken)
-	}
 	return nil
 }
