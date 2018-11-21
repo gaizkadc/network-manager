@@ -10,8 +10,8 @@ import (
 	"github.com/nalej/grpc-common-go"
 	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-organization-go"
-	"github.com/nalej/network-manager/internal/pkg/entities"
 	"github.com/nalej/grpc-utils/pkg/conversions"
+	"github.com/nalej/network-manager/internal/pkg/entities"
 	"github.com/rs/zerolog/log"
 )
 
@@ -19,11 +19,11 @@ type Handler struct {
 	Manager Manager
 }
 
-func NewHandler(manager Manager) *Handler{
+func NewHandler(manager Manager) *Handler {
 	return &Handler{manager}
 }
 
-func (h * Handler) AddDNSEntry (ctx context.Context, entry *grpc_network_go.AddDNSEntryRequest) (*grpc_common_go.Success, error) {
+func (h *Handler) AddDNSEntry(ctx context.Context, entry *grpc_network_go.AddDNSEntryRequest) (*grpc_common_go.Success, error) {
 	log.Debug().Str("organizationId", entry.OrganizationId).
 		Str("networkId", entry.NetworkId).
 		Str("fqdn", entry.Fqdn).
@@ -44,7 +44,7 @@ func (h * Handler) AddDNSEntry (ctx context.Context, entry *grpc_network_go.AddD
 	return &grpc_common_go.Success{}, nil
 }
 
-func (h * Handler) DeleteDNSEntry (ctx context.Context, entry *grpc_network_go.DeleteDNSEntryRequest) (*grpc_common_go.Success, error) {
+func (h *Handler) DeleteDNSEntry(ctx context.Context, entry *grpc_network_go.DeleteDNSEntryRequest) (*grpc_common_go.Success, error) {
 	log.Debug().Str("organizationId", entry.OrganizationId).
 		Str("fqdn", entry.Fqdn).Msg("delete dns entry")
 
@@ -63,7 +63,7 @@ func (h * Handler) DeleteDNSEntry (ctx context.Context, entry *grpc_network_go.D
 	return &grpc_common_go.Success{}, nil
 }
 
-func (h * Handler) ListEntries (ctx context.Context, organizationID *grpc_organization_go.OrganizationId) (*grpc_network_go.DNSEntryList, error) {
+func (h *Handler) ListEntries(ctx context.Context, organizationID *grpc_organization_go.OrganizationId) (*grpc_network_go.DNSEntryList, error) {
 	log.Debug().Str("organizationId", organizationID.OrganizationId).Msg("list dns entries")
 
 	err := entities.ValidOrganizationId(organizationID)
@@ -79,7 +79,7 @@ func (h * Handler) ListEntries (ctx context.Context, organizationID *grpc_organi
 		return nil, derrors.NewGenericError(err.Error())
 	}
 
-	foundEntries := make ([]*grpc_network_go.DNSEntry, len(entryList))
+	foundEntries := make([]*grpc_network_go.DNSEntry, len(entryList))
 	for i, n := range entryList {
 		foundEntries[i] = n.ToGRPC()
 	}

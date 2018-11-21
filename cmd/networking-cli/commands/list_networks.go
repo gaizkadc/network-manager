@@ -6,15 +6,16 @@ package commands
 
 import (
 	"context"
+	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-organization-go"
 	"github.com/rs/zerolog/log"
-	"github.com/nalej/grpc-network-go"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 )
 
 // GRPC server address
 var listNetworksServer string
+
 // Organization ID
 var listNetworksOrgId string
 
@@ -35,12 +36,11 @@ func init() {
 	listNetworksCmd.MarkFlagRequired("orgid")
 }
 
-
 func listNetworks() {
 
 	conn, err := grpc.Dial(listNetworksServer, grpc.WithInsecure())
 
-	if err!=nil{
+	if err != nil {
 		log.Fatal().Err(err).Msgf("impossible to connect to server %s", listNetworksServer)
 	}
 

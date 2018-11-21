@@ -19,11 +19,11 @@ type Network struct {
 	CreationTimestamp int64
 }
 
-func (n *Network) ToGRPC() *grpc_network_go.Network{
+func (n *Network) ToGRPC() *grpc_network_go.Network {
 	return &grpc_network_go.Network{
-		OrganizationId: n.OrganizationId,
-		NetworkId: n.NetworkId,
-		Name: n.NetworkName,
+		OrganizationId:    n.OrganizationId,
+		NetworkId:         n.NetworkId,
+		Name:              n.NetworkName,
 		CreationTimestamp: n.CreationTimestamp,
 	}
 }

@@ -18,9 +18,9 @@ var debugLevel bool
 var consoleLogging bool
 
 var rootCmd = &cobra.Command{
-	Use:   "network-manager-cli",
-	Short: "Networking-cli",
-	Long:  `Client for the network-manager manager`,
+	Use:     "network-manager-cli",
+	Short:   "Networking-cli",
+	Long:    `Client for the network-manager manager`,
 	Version: "unknown-version",
 
 	Run: func(cmd *cobra.Command, args []string) {
