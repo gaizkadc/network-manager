@@ -7,48 +7,45 @@ package zt
 import (
 	"fmt"
 	"github.com/nalej/derrors"
+	"github.com/nalej/dhttp"
 	"github.com/nalej/network-manager/internal/pkg/entities"
 	"github.com/rs/zerolog/log"
-    "github.com/nalej/dhttp"
 )
 
 // Constants
 const (
-	controllerPath = "/controller"
-	networkAddPath = "/controller/network/%s______"
-	networkDelPath = "/controller/network/%s"
-	networkPath = controllerPath + "/network"
-	networkDetailPath = networkPath + "/%s"
+	controllerPath        = "/controller"
+	networkAddPath        = "/controller/network/%s______"
+	networkDelPath        = "/controller/network/%s"
+	networkPath           = controllerPath + "/network"
+	networkDetailPath     = networkPath + "/%s"
 	networkAuthMemberPath = networkPath + "/%s" + "/member" + "/%s"
-	PeerAddressLength = 10
+	PeerAddressLength     = 10
 )
 
-
 type ZTClient struct {
-    client dhttp.Client
+	client dhttp.Client
 }
-
 
 func NewZTClient(url string, accessToken string) (*ZTClient, derrors.Error) {
-    log.Debug().Msgf("connecting to %s", url)
+	log.Debug().Msgf("connecting to %s", url)
 
-    conf, err := dhttp.NewRestURLConfig(url)
+	conf, err := dhttp.NewRestURLConfig(url)
 
-    if err != nil {
-        log.Error().Msgf("%s",err.Error())
-        log.Error().Err(err).Msg("error creating new ZTClient")
-        return nil, err
-    }
+	if err != nil {
+		log.Error().Msgf("%s", err.Error())
+		log.Error().Err(err).Msg("error creating new ZTClient")
+		return nil, err
+	}
 
-    conf.Headers = map[string]string{
-        "X-ZT1-Auth": accessToken,
-    }
+	conf.Headers = map[string]string{
+		"X-ZT1-Auth": accessToken,
+	}
 
-    client := dhttp.NewClientSling(conf)
+	client := dhttp.NewClientSling(conf)
 
-    return  &ZTClient{client: client,}, nil
+	return &ZTClient{client: client}, nil
 }
-
 
 // Add a ZeroTier network to the controller
 //   params:
@@ -77,18 +74,19 @@ func (ztc *ZTClient) Add(networkName string, organizationId string) (*ZTNetwork,
 
 	// Send create network request to controller
 
-
 	network := &ZTNetwork{}
 
 	entity := &ZTNetwork{
-	    Name: networkName,
-	    V6AssignMode: &V6AssignMode{
-	        Zt: true,
-	        Rfc4193: true,
-	        SixPlane: true,
-        },
-    }
-
+		Name: networkName,
+		V4AssignMode: &V4AssignMode{
+			Zt:       true,
+		},
+		V6AssignMode: &V6AssignMode{
+			Zt:       true,
+			Rfc4193:  true,
+			SixPlane: true,
+		},
+	}
 
 	response := ztc.client.Post(path, entity, network)
 	if response.Error != nil {
@@ -118,7 +116,7 @@ func (ztc *ZTClient) Delete(networkId string, organizationId string) derrors.Err
 	}
 
 	entity := &entities.Network{
-		NetworkId: networkId,
+		NetworkId:      networkId,
 		OrganizationId: organizationId,
 	}
 
@@ -162,7 +160,7 @@ func (ztc *ZTClient) Get(networkID string) (*ZTNetwork, derrors.Error) {
 //     Error, if there is an internal error.
 func (ztc *ZTClient) List(organizationID string) ([]ZTNetwork, derrors.Error) {
 	// Send get network request to controller
-	networkList := make ([]string, 0)
+	networkList := make([]string, 0)
 	response := ztc.client.Get(networkPath, &networkList)
 	if response.Error != nil {
 		return nil, derrors.NewNotFoundError("Error retrieving networks", response.Error).WithParams(organizationID)
@@ -170,7 +168,7 @@ func (ztc *ZTClient) List(organizationID string) ([]ZTNetwork, derrors.Error) {
 	//var networks []ZTNetwork
 	networks := make([]ZTNetwork, len(networkList))
 	for i, n := range networkList {
-	//for i := 0; i < len(networkList); i++ {
+		//for i := 0; i < len(networkList); i++ {
 		converted, err := ztc.Get(n)
 		if err != nil {
 			log.Error().Msgf("Impossible to get network %s", n)
@@ -187,11 +185,11 @@ func (ztc *ZTClient) List(organizationID string) ([]ZTNetwork, derrors.Error) {
 //		Member ID
 //	returns:
 //		Error, if there's one
-func (ztc *ZTClient) Authorize (networkId string, memberId string) derrors.Error {
+func (ztc *ZTClient) Authorize(networkId string, memberId string) derrors.Error {
 	// Create new authorized member
 	member := &ZTMember{
-		ID: memberId,
-		Nwid: networkId,
+		ID:         memberId,
+		Nwid:       networkId,
 		Authorized: True(),
 	}
 

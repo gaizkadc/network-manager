@@ -51,16 +51,14 @@ type ZTNetwork struct {
 	Rules []Rule `json:"rules,omitempty"`
 }
 
-func (n *ZTNetwork) ToNetwork (organizationId string) entities.Network {
-	return entities.Network {
-		OrganizationId: organizationId,
-		NetworkId: n.ID,
-		NetworkName: n.Name,
+func (n *ZTNetwork) ToNetwork(organizationId string) entities.Network {
+	return entities.Network{
+		OrganizationId:    organizationId,
+		NetworkId:         n.ID,
+		NetworkName:       n.Name,
 		CreationTimestamp: time.Now().Unix(),
 	}
 }
-
-
 
 type PeerNC struct {
 	client dhttp.Client
@@ -86,7 +84,7 @@ type V6AssignMode struct {
 
 type Route struct {
 	Target string `json:"target"`
-	Via string `json:"via,omitempty"`
+	Via    string `json:"via,omitempty"`
 }
 
 // IP assignment pool object format
@@ -144,7 +142,6 @@ func (ztc *ZTClient) GetStatus() (*PeerStatus, derrors.Error) {
 	result := PeerStatus{}
 	response := ztc.client.Get("/status", &result)
 
-	log.Debug().Msgf("show the thing %d",response.Status)
 	if response.Error != nil {
 		log.Error().Err(response.Error).Msg("error getting status")
 		return nil, response.Error
@@ -155,7 +152,7 @@ func (ztc *ZTClient) GetStatus() (*PeerStatus, derrors.Error) {
 
 type ZTMember struct {
 	// Member's 10-digit ZeroTier address [ro]
-	ID  string `json:"id,omitempty"`
+	ID string `json:"id,omitempty"`
 	// Member's 10-digit ZeroTier address [ro]
 	Address string `json:"address,omitempty"`
 	// Object type on controller ("member") [ro]

@@ -16,9 +16,10 @@ const (
 	emptyNetworkName    = "network_name cannot be empty"
 	emptyFQDN           = "FQDN cannot be empty"
 	emptyMemberId       = "Member ID cannot be empty"
+	emptyZTAccessToken	= "ZT Access Token cannot be empty"
 )
 
-func ValidAddNetworkRequest (addNetworkRequest *grpc_network_go.AddNetworkRequest) derrors.Error {
+func ValidAddNetworkRequest(addNetworkRequest *grpc_network_go.AddNetworkRequest) derrors.Error {
 	if addNetworkRequest.OrganizationId == "" {
 		return derrors.NewInvalidArgumentError(emptyOrganizationId)
 	} else if addNetworkRequest.Name == "" {
@@ -34,21 +35,21 @@ func ValidOrganizationId(organizationID *grpc_organization_go.OrganizationId) de
 	return nil
 }
 
-func ValidNetworkId (networkId *grpc_network_go.NetworkId) derrors.Error {
+func ValidNetworkId(networkId *grpc_network_go.NetworkId) derrors.Error {
 	if networkId.NetworkId == "" {
 		return derrors.NewInvalidArgumentError(emptyNetworkId)
 	}
 	return nil
 }
 
-func ValidFQDN (fqdn *grpc_network_go.DNSEntry) derrors.Error {
+func ValidFQDN(fqdn *grpc_network_go.DNSEntry) derrors.Error {
 	if fqdn.Fqdn == "" {
 		return derrors.NewInvalidArgumentError(emptyFQDN)
 	}
 	return nil
 }
 
-func ValidDeleteNetworkRequest (deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) derrors.Error {
+func ValidDeleteNetworkRequest(deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) derrors.Error {
 	if deleteNetworkRequest.OrganizationId == "" {
 		return derrors.NewInvalidArgumentError(emptyOrganizationId)
 	}
@@ -58,7 +59,7 @@ func ValidDeleteNetworkRequest (deleteNetworkRequest *grpc_network_go.DeleteNetw
 	return nil
 }
 
-func ValidAuthorizeMemberRequest (authMemberRequest *grpc_network_go.AuthorizeMemberRequest) derrors.Error {
+func ValidAuthorizeMemberRequest(authMemberRequest *grpc_network_go.AuthorizeMemberRequest) derrors.Error {
 	if authMemberRequest.OrganizationId == "" {
 		return derrors.NewInvalidArgumentError(emptyOrganizationId)
 	}
@@ -71,5 +72,12 @@ func ValidAuthorizeMemberRequest (authMemberRequest *grpc_network_go.AuthorizeMe
 		return derrors.NewInvalidArgumentError(emptyMemberId)
 	}
 
+	return nil
+}
+
+func ValidZTAccessToken(ztAccessToken string) derrors.Error {
+	if ztAccessToken == "" {
+		return derrors.NewInvalidArgumentError(emptyZTAccessToken)
+	}
 	return nil
 }
