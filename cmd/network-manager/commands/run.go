@@ -7,7 +7,6 @@
 package commands
 
 import (
-	"github.com/nalej/network-manager/internal/pkg/entities"
 	"github.com/nalej/network-manager/internal/pkg/server"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -36,9 +35,9 @@ func init() {
 	runCmd.Flags().StringVar(&config.ZTAccessToken, "ztaccesstoken", os.Getenv("ZT_ACCESS_TOKEN"), "ZT Access Token")
 	runCmd.Flags().StringVar(&config.DNSUrl, "dnsurl", "192.168.99.100:30500", "Consul DNS URL")
 
-	err := entities.ValidZTAccessToken(config.ZTAccessToken)
+	config.Print()
+	err := config.Validate()
 	if err != nil {
-		config.Print()
-		log.Fatal().Msg("Cannot get ZT Access Token")
+		log.Fatal().Err(err)
 	}
 }

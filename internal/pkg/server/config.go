@@ -26,6 +26,18 @@ func (conf * Config) Validate() derrors.Error {
 	if conf.Port <= 0 {
 		return derrors.NewInvalidArgumentError("port must be specified")
 	}
+	if conf.SystemModelURL == "" {
+		return derrors.NewInvalidArgumentError("System Model URL be specified")
+	}
+	if conf.ZTUrl == "" {
+		return derrors.NewInvalidArgumentError("ZT URL must be specified")
+	}
+	if conf.ZTAccessToken == "" {
+		return derrors.NewInvalidArgumentError("ZT Access Token must be specified")
+	}
+	if conf.DNSUrl == "" {
+		return derrors.NewInvalidArgumentError("DNS URL be specified")
+	}
 	return nil
 }
 
