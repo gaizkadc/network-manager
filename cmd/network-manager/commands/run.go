@@ -10,6 +10,7 @@ import (
 	"github.com/nalej/network-manager/internal/pkg/server"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 var config = server.Config{}
@@ -31,7 +32,12 @@ func init() {
 	runCmd.Flags().IntVar(&config.Port, "port", 8000, "Port to launch the gRPC server")
 	runCmd.Flags().StringVar(&config.SystemModelURL, "sm", "localhost:8800", "System Model URL")
 	runCmd.Flags().StringVar(&config.ZTUrl, "zturl", "http://localhost:9993", "ZT Controller URL")
-	runCmd.Flags().StringVar(&config.ZTAccessToken, "ztaccesstoken", "", "ZT Access Token")
+	runCmd.Flags().StringVar(&config.ZTAccessToken, "ztaccesstoken", os.Getenv("ZT_ACCESS_TOKEN"), "ZT Access Token")
 	runCmd.Flags().StringVar(&config.DNSUrl, "dnsurl", "192.168.99.100:30500", "Consul DNS URL")
-	runCmd.MarkFlagRequired("ztaccesstoken")
+
+	config.Print()
+	err := config.Validate()
+	if err != nil {
+		log.Fatal().Err(err)
+	}
 }

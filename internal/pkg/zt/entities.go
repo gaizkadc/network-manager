@@ -142,7 +142,6 @@ func (ztc *ZTClient) GetStatus() (*PeerStatus, derrors.Error) {
 	result := PeerStatus{}
 	response := ztc.client.Get("/status", &result)
 
-	log.Debug().Msgf("show the thing %d", response.Status)
 	if response.Error != nil {
 		log.Error().Err(response.Error).Msg("error getting status")
 		return nil, response.Error

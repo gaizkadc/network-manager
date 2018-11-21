@@ -24,27 +24,24 @@ spec:
         component: network-manager
     spec:
       containers:
-      - name: example
+      - name: network-manager
         image: nalejregistry.azurecr.io/nalej/network-manager:VERSION
-        env:
-          - name: ZT_ACCESS_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: zt-controller-auth
-                key: zt-access-token
         imagePullPolicy: IfNotPresent
         args:
           - "run"
-          - "--dnsurl"
-          - "http://dns-server-ui.nalej:80"
-          - "--sm"
-          - "system-model.nalej:8800"
-          - "--ztaccesstoken"
-          - "$(ZT_ACCESS_TOKEN)"
-          - "--zturl"
-          - "http://zt-controller.nalej:9993"
+          - "--dnsurl=http://dns-server-ui.nalej:80"
+          - "--sm=10.0.2.2:8800"
+          - "--zturl=http://localhost:9993"
           - "--debug"
         securityContext:
-          runAsUser: 2000
+          runAsUser: 0
+        volumeMounts:
+        - name: dev-net-tun
+          readOnly: true
+          mountPath: /dev/net/tun
       imagePullSecrets:
       - name: nalej-registry
+      volumes:
+      - name: dev-net-tun
+        hostPath:
+          path: /dev/net/tun

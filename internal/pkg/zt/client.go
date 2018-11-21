@@ -78,6 +78,9 @@ func (ztc *ZTClient) Add(networkName string, organizationId string) (*ZTNetwork,
 
 	entity := &ZTNetwork{
 		Name: networkName,
+		V4AssignMode: &V4AssignMode{
+			Zt:       true,
+		},
 		V6AssignMode: &V6AssignMode{
 			Zt:       true,
 			Rfc4193:  true,

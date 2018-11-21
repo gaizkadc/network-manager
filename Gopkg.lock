@@ -175,7 +175,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:e2f6f07c6ee5903a51a02e35cf1c48fb0c4ecf1d025a371d4b2a0105ea434f38"
+  digest = "1:d518eb4bfb76545977b0be8549606e6de5c56f8887b84cc24d12f5ec1c587e3a"
   name = "github.com/rs/zerolog"
   packages = [
     ".",
@@ -184,8 +184,8 @@
     "log",
   ]
   pruneopts = ""
-  revision = "848482bc3dbeed6a47eb8f8cec0d4484795b1314"
-  version = "v1.10.3"
+  revision = "8747b7b3a51b5d08ee7ac50eaf4869edaf9f714a"
+  version = "v1.11.0"
 
 [[projects]]
   digest = "1:a1403cc8a94b8d7956ee5e9694badef0e7b051af289caad1cf668331e3ffa4f6"
@@ -233,11 +233,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0ad2730a94694f9968449f91f0311788b58b2822ff5eff299202e02f538c6027"
+  digest = "1:2e1aadff5bda52e267975408bf6b5e90135fc643829c9e4e964ff82c3826a1dd"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = ""
-  revision = "ec83556a53fe16b65c452a104ea9d1e86a671852"
+  revision = "0cf1ed9e522b7dbb416f080a5c8003de9b702bf4"
 
 [[projects]]
   digest = "1:5acd3512b047305d49e8763eef7ba423901e85d5dd2fd1e71778a0ea8de10bd4"
