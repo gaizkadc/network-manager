@@ -3,11 +3,11 @@ package server
 import (
 	"fmt"
 	"github.com/nalej/grpc-network-go"
+	"github.com/nalej/grpc-utils/pkg/tools"
 	"github.com/nalej/network-manager/internal/pkg/consul"
 	"github.com/nalej/network-manager/internal/pkg/server/dns"
 	"github.com/nalej/network-manager/internal/pkg/server/networks"
 	"github.com/rs/zerolog/log"
-	"github.com/nalej/grpc-utils/pkg/tools"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
@@ -15,7 +15,7 @@ import (
 
 type Server struct {
 	Configuration Config
-	Server * tools.GenericGRPCServer
+	Server        *tools.GenericGRPCServer
 }
 
 func NewServer(config Config) *Server {
@@ -24,7 +24,6 @@ func NewServer(config Config) *Server {
 		tools.NewGenericGRPCServer(uint32(config.Port)),
 	}
 }
-
 
 func (s *Server) Launch() {
 

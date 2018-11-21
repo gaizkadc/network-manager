@@ -17,14 +17,14 @@ type Manager struct {
 	client consul.ConsulClient
 }
 
-func NewManager (consulClient *consul.ConsulClient) (* Manager, derrors.Error){
-	return &Manager {
+func NewManager(consulClient *consul.ConsulClient) (*Manager, derrors.Error) {
+	return &Manager{
 		client: *consulClient,
 	}, nil
 }
 
 // AddDNSEntry
-func (m * Manager) AddDNSEntry (entry *grpc_network_go.AddDNSEntryRequest) derrors.Error {
+func (m *Manager) AddDNSEntry(entry *grpc_network_go.AddDNSEntryRequest) derrors.Error {
 	err := m.client.Add(entry.OrganizationId, entry.Fqdn, entry.Ip)
 
 	if err != nil {
@@ -36,7 +36,7 @@ func (m * Manager) AddDNSEntry (entry *grpc_network_go.AddDNSEntryRequest) derro
 }
 
 // DeleteDNSEntry
-func (m * Manager) DeleteDNSEntry (entry *grpc_network_go.DeleteDNSEntryRequest) derrors.Error {
+func (m *Manager) DeleteDNSEntry(entry *grpc_network_go.DeleteDNSEntryRequest) derrors.Error {
 	err := m.client.Delete(entry.Fqdn)
 
 	if err != nil {
@@ -48,7 +48,7 @@ func (m * Manager) DeleteDNSEntry (entry *grpc_network_go.DeleteDNSEntryRequest)
 }
 
 // ListDNSEntries
-func (m * Manager) ListDNSEntries (organizationId *grpc_organization_go.OrganizationId) ([]entities.DNSEntry, derrors.Error) {
+func (m *Manager) ListDNSEntries(organizationId *grpc_organization_go.OrganizationId) ([]entities.DNSEntry, derrors.Error) {
 	serviceList, err := m.client.List(organizationId.OrganizationId)
 
 	if err != nil {
@@ -56,7 +56,7 @@ func (m * Manager) ListDNSEntries (organizationId *grpc_organization_go.Organiza
 		return nil, derrors.NewGenericError(err.Error())
 	}
 
-	entryList := make ([]entities.DNSEntry, len(serviceList))
+	entryList := make([]entities.DNSEntry, len(serviceList))
 	for i, n := range serviceList {
 		entryList[i].OrganizationId = organizationId.OrganizationId
 		entryList[i].Fqdn = n.Service

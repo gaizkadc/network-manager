@@ -6,16 +6,18 @@ package commands
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
 	"github.com/nalej/grpc-network-go"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 )
 
 // GRPC server address
 var getNetworkServer string
+
 // Network ID
 var getNetworkId string
+
 // Organization ID
 var getNetworkOrgId string
 
@@ -38,19 +40,18 @@ func init() {
 	getNetworkCmd.MarkFlagRequired("orgid")
 }
 
-
 func getNetwork() {
 
 	conn, err := grpc.Dial(getNetworkServer, grpc.WithInsecure())
 
-	if err!=nil{
+	if err != nil {
 		log.Fatal().Err(err).Msgf("impossible to connect to server %s", getNetworkServer)
 	}
 
 	client := grpc_network_go.NewNetworksClient(conn)
 
 	request := grpc_network_go.NetworkId{
-		NetworkId: getNetworkId,
+		NetworkId:      getNetworkId,
 		OrganizationId: getNetworkOrgId,
 	}
 
@@ -60,5 +61,5 @@ func getNetwork() {
 		return
 	}
 
-	log.Info().Msgf("%s",retrievedNetwork.String())
+	log.Info().Msgf("%s", retrievedNetwork.String())
 }

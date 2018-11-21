@@ -6,16 +6,18 @@ package commands
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
 	"github.com/nalej/grpc-network-go"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 )
 
 // GRPC server address
 var deleteEntryServer string
+
 // Network ID
 var deleteEntryOrganizationId string
+
 // FQDN
 var deleteEntryFqdn string
 
@@ -38,12 +40,11 @@ func init() {
 	deleteEntryCmd.MarkFlagRequired("fqdn")
 }
 
-
 func deleteEntry() {
 
 	conn, err := grpc.Dial(deleteEntryServer, grpc.WithInsecure())
 
-	if err!=nil{
+	if err != nil {
 		log.Fatal().Err(err).Msgf("impossible to connect to server %s", deleteEntryServer)
 	}
 
@@ -51,7 +52,7 @@ func deleteEntry() {
 
 	request := grpc_network_go.DeleteDNSEntryRequest{
 		OrganizationId: deleteEntryOrganizationId,
-		Fqdn:      deleteEntryFqdn,
+		Fqdn:           deleteEntryFqdn,
 	}
 
 	_, err = client.DeleteDNSEntry(context.Background(), &request)

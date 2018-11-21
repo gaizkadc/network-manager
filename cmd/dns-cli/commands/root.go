@@ -18,9 +18,9 @@ var debugLevel bool
 var consoleLogging bool
 
 var rootCmd = &cobra.Command{
-	Use:   "dns-cli",
-	Short: "DNS-cli",
-	Long:  `Client for the DNS part of the network-manager manager`,
+	Use:     "dns-cli",
+	Short:   "DNS-cli",
+	Long:    `Client for the DNS part of the network-manager manager`,
 	Version: "unknown-version",
 
 	Run: func(cmd *cobra.Command, args []string) {

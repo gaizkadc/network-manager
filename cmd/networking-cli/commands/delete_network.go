@@ -6,16 +6,18 @@ package commands
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
 	"github.com/nalej/grpc-network-go"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 )
 
 // GRPC server address
 var delNetworkServer string
+
 // Network name
 var delNetworkId string
+
 // Organization ID
 var delNetworkOrgId string
 
@@ -38,19 +40,18 @@ func init() {
 	delNetworkCmd.MarkFlagRequired("orgid")
 }
 
-
 func delNetwork() {
 
 	conn, err := grpc.Dial(delNetworkServer, grpc.WithInsecure())
 
-	if err!=nil{
+	if err != nil {
 		log.Fatal().Err(err).Msgf("impossible to connect to server %s", delNetworkServer)
 	}
 
 	client := grpc_network_go.NewNetworksClient(conn)
 
 	request := grpc_network_go.DeleteNetworkRequest{
-		NetworkId:           delNetworkId,
+		NetworkId:      delNetworkId,
 		OrganizationId: delNetworkOrgId,
 	}
 

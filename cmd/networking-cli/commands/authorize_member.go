@@ -6,18 +6,21 @@ package commands
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
 	"github.com/nalej/grpc-network-go"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 )
 
 // GRPC server address
 var authorizeMemberServer string
+
 // Organization ID
 var authorizeMemberOrganizationId string
+
 // Network ID
 var authorizeMemberNetworkId string
+
 // Member ID
 var authorizeMemberMemberId string
 
@@ -42,21 +45,20 @@ func init() {
 	authorizeMemberCmd.MarkFlagRequired("memberid")
 }
 
-
 func authorizeMember() {
 
 	conn, err := grpc.Dial(authorizeMemberServer, grpc.WithInsecure())
 
-	if err!=nil{
+	if err != nil {
 		log.Fatal().Err(err).Msgf("impossible to connect to server %s", authorizeMemberServer)
 	}
 
 	client := grpc_network_go.NewNetworksClient(conn)
 
-	request := grpc_network_go.AuthorizeMemberRequest {
+	request := grpc_network_go.AuthorizeMemberRequest{
 		OrganizationId: authorizeMemberOrganizationId,
-		NetworkId: authorizeMemberNetworkId,
-		MemberId: authorizeMemberMemberId,
+		NetworkId:      authorizeMemberNetworkId,
+		MemberId:       authorizeMemberMemberId,
 	}
 
 	_, err = client.AuthorizeMember(context.Background(), &request)
