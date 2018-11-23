@@ -78,14 +78,31 @@ func (ztc *ZTClient) Add(networkName string, organizationId string) (*ZTNetwork,
 
 	entity := &ZTNetwork{
 		Name: networkName,
+		IpAssignmentPools: []IpAssignmentPool{
+            {
+                IpRangeStart: "192.168.0.1",
+                IpRangeEnd: "192.168.255.254",
+            },
+            /*
+		    {
+		        IpRangeStart: "fd00:feed:feed:beef:0000:0000:0000:0000",
+		        IpRangeEnd: "fd00:feed:feed:beef:ffff:ffff:ffff:ffff",
+	        },
+            */
+        },
 		V4AssignMode: &V4AssignMode{
 			Zt:       true,
 		},
+        /*
 		V6AssignMode: &V6AssignMode{
 			Zt:       true,
 			Rfc4193:  true,
 			SixPlane: true,
 		},
+        */
+		Routes: []Route{
+		    {Target: "192.168.0.0/16"},
+        },
 	}
 
 	response := ztc.client.Post(path, entity, network)

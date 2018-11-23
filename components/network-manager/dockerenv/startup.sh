@@ -9,13 +9,6 @@ wait_file() {
   echo "File $1 found"
 }
 
-zt_connected() {
-    string="$1"
-    case "$string" in
-      *"OK PRIVATE zt0"*) return 0 ;;
-      *)                  return 1 ;;
-    esac
-}
 
 export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin
 
@@ -24,7 +17,15 @@ if [ ! -e /dev/net/tun ]; then
 	exit 1
 fi
 
-./zerotier-one &
+#echo "Stop zerotier service..."
+service zerotier-one stop
+
+echo "Set permission to /dev/net/tun"
+# This is a workaround depicted in https://github.com/zerotier/ZeroTierOne/issues/699
+chmod 0666 /dev/net/tun
+
+#echo "Start zerotier service..."
+service zerotier-one start
 
 wait_file "/var/lib/zerotier-one/zerotier-one.pid"
 
