@@ -14,6 +14,7 @@ type DNSEntry struct {
 	NetworkId      string
 	Fqdn           string
 	Ip             string
+	AppInstanceId  string
 }
 
 func DNSEntryFromGRPC(entry *grpc_network_go.AddDNSEntryRequest) DNSEntry {
@@ -22,6 +23,7 @@ func DNSEntryFromGRPC(entry *grpc_network_go.AddDNSEntryRequest) DNSEntry {
 		NetworkId:      entry.NetworkId,
 		Fqdn:           entry.Fqdn,
 		Ip:             entry.Ip,
+		AppInstanceId:  entry.AppInstanceId,
 	}
 }
 
@@ -39,6 +41,7 @@ func (e *DNSEntry) ToConsulAPI() *api.AgentServiceRegistration {
 		Kind:    api.ServiceKind(e.OrganizationId),
 		Name:    e.Fqdn,
 		Address: e.Ip,
+		Tags: []string{e.OrganizationId, e.AppInstanceId},
 	}
 }
 

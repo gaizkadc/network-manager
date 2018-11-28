@@ -140,12 +140,12 @@
   version = "v0.0.13"
 
 [[projects]]
-  digest = "1:44bedbd1cdaffdf8df95f1641948b0462f2f7784e8fea2a8db7b60a6fe898fc8"
+  digest = "1:c47307e08787c571e66e58d4532f4cee4f4d8bf996db18acb571871b9fdf3b3e"
   name = "github.com/nalej/grpc-network-go"
   packages = ["."]
   pruneopts = ""
-  revision = "2701085ea2481902df28283922d188cebd433453"
-  version = "v0.0.12"
+  revision = "4ff8a03832222360bb09be8aa02dc68b5834101d"
+  version = "v0.0.20"
 
 [[projects]]
   digest = "1:f67ef4fca5de50942bba5c4dc70ecf9a86ab360dc7b9d3780ebe39547dfe8e5b"

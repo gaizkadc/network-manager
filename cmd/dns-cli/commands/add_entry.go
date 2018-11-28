@@ -27,6 +27,9 @@ var addEntryFqdn string
 // IP
 var addEntryIp string
 
+// Application Instance Id
+var addEntryAppInstanceId string
+
 var addEntryCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add a new DNS entry",
@@ -44,10 +47,12 @@ func init() {
 	addEntryCmd.Flags().StringVar(&addEntryNetworkId, "netId", "", "ID of the network in which the DNS entry will be added")
 	addEntryCmd.Flags().StringVar(&addEntryFqdn, "fqdn", "", "FQDN of the DNS entry")
 	addEntryCmd.Flags().StringVar(&addEntryIp, "ip", "", "IP of the DNS entry")
+	addEntryCmd.Flags().StringVar(&addEntryAppInstanceId, "appId", "", "Application instance id")
 	addEntryCmd.MarkFlagRequired("orgId")
 	addEntryCmd.MarkFlagRequired("netId")
 	addEntryCmd.MarkFlagRequired("fqdn")
 	addEntryCmd.MarkFlagRequired("ip")
+	addEntryCmd.MarkFlagRequired("appId")
 }
 
 func addEntry() {
@@ -65,6 +70,7 @@ func addEntry() {
 		NetworkId:      addEntryNetworkId,
 		Fqdn:           addEntryFqdn,
 		Ip:             addEntryIp,
+		AppInstanceId:  addEntryAppInstanceId,
 	}
 
 	_, err = client.AddDNSEntry(context.Background(), &request)
