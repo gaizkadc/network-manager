@@ -1,7 +1,6 @@
 //
 // Copyright (C) 2018 Daisho Group - All Rights Reserved
 //
-
 // This file contains the specification of the API program in charge of launching the gRPC server.
 
 package commands
@@ -34,10 +33,4 @@ func init() {
 	runCmd.Flags().StringVar(&config.ZTUrl, "zturl", "http://localhost:9993", "ZT Controller URL")
 	runCmd.Flags().StringVar(&config.ZTAccessToken, "ztaccesstoken", os.Getenv("ZT_ACCESS_TOKEN"), "ZT Access Token")
 	runCmd.Flags().StringVar(&config.DNSUrl, "dnsurl", "192.168.99.100:30500", "Consul DNS URL")
-
-	config.Print()
-	err := config.Validate()
-	if err != nil {
-		log.Fatal().Err(err)
-	}
 }

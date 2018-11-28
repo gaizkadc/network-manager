@@ -18,7 +18,7 @@ var debugLevel bool
 var consoleLogging bool
 
 var rootCmd = &cobra.Command{
-	Use:     "network-manager-cli",
+	Use:     "networking-cli",
 	Short:   "Networking-cli",
 	Long:    `Client for the network-manager manager`,
 	Version: "unknown-version",
