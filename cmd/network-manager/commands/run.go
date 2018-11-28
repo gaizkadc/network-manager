@@ -1,7 +1,6 @@
 //
 // Copyright (C) 2018 Daisho Group - All Rights Reserved
 //
-
 // This file contains the specification of the API program in charge of launching the gRPC server.
 
 package commands

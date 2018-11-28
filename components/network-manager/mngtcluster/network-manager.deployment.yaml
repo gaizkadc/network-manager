@@ -30,7 +30,7 @@ spec:
         args:
           - "run"
           - "--dnsurl=http://dns-server-ui.nalej:80"
-          - "--sm=10.0.2.2:8800"
+          - "--sm=system-model.nalej:8800"
           - "--zturl=http://localhost:9993"
           - "--debug"
         securityContext:
