@@ -11,6 +11,13 @@ import (
 type ZTNetwork struct {
 	// 16-digit ZeroTier network ID [ro]
 	ID string `json:"id,omitempty"`
+	// Allow global assignment
+	AllowGlobal *bool `json:"allowGlobal, omitempty"`
+	// Allow managed entries
+	AllowManaged *bool `json:"allowManaged, omitempty"`
+
+	DHCP *bool `json:"dhcp, omitempty"`
+
 	// 16-digit ZeroTier network ID (for backward compatibility) [ro]
 	Nwid string `json:"nwid,omitempty"`
 	// Current clock, ms since epoch [ro]
@@ -187,5 +194,10 @@ type ZTMember struct {
 
 func True() *bool {
 	val := true
+	return &val
+}
+
+func False() *bool {
+	val := false
 	return &val
 }
