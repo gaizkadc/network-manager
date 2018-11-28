@@ -8,7 +8,7 @@
 FROM debian:stretch
 
 RUN apt-get update \
-    && apt-get install -y curl gpg iptables \
+    && apt-get install -y curl gpg \
     && curl -s https://install.zerotier.com/ | bash \
     && apt-get autoremove --purge -y \
     && rm -rf /var/lib/apt/lists/*
