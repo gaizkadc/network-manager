@@ -35,11 +35,11 @@ func NewConsulClient(address string) (*ConsulClient, derrors.Error) {
 func (a *ConsulClient) Add(organizationId string, appInstanceId string, fqdn string, ip string) derrors.Error {
 
 	entry := &api.AgentServiceRegistration{
-		Kind:    api.ServiceKind(appInstanceId),
+		//Kind:    api.ServiceKind(appInstanceId),
 		Name:    fqdn,
 		Address: ip,
 		Tags: []string{organizationId, appInstanceId},
-		ID: fmt.Sprintf("%s-%s",appInstanceId,organizationId),
+		//ID: fmt.Sprintf("%s-%s",appInstanceId,organizationId),
 	}
 
 	err := a.client.Agent().ServiceRegister(entry)
