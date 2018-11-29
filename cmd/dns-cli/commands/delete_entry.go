@@ -18,8 +18,8 @@ var deleteEntryServer string
 // Network ID
 var deleteEntryOrganizationId string
 
-// FQDN
-var deleteEntryFqdn string
+// ApplicationInstanceId
+var deleteEntryAppInstanceId string
 
 var deleteEntryCmd = &cobra.Command{
 	Use:   "delete",
@@ -34,10 +34,10 @@ var deleteEntryCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(deleteEntryCmd)
 	deleteEntryCmd.Flags().StringVar(&deleteEntryServer, "server", "localhost:8000", "Networking manager server URL")
-	deleteEntryCmd.Flags().StringVar(&deleteEntryOrganizationId, "orgid", "", "ID of the organization from which the DNS entry will be deleted")
-	deleteEntryCmd.Flags().StringVar(&deleteEntryFqdn, "fqdn", "", "FQDN of the DNS entry")
+	deleteEntryCmd.Flags().StringVar(&deleteEntryOrganizationId, "orgId", "", "ID of the organization from which the DNS entry will be deleted")
+	deleteEntryCmd.Flags().StringVar(&deleteEntryAppInstanceId, "appId", "", "Application instance ID")
 	deleteEntryCmd.MarkFlagRequired("netid")
-	deleteEntryCmd.MarkFlagRequired("fqdn")
+	deleteEntryCmd.MarkFlagRequired("appId")
 }
 
 func deleteEntry() {
@@ -52,12 +52,12 @@ func deleteEntry() {
 
 	request := grpc_network_go.DeleteDNSEntryRequest{
 		OrganizationId: deleteEntryOrganizationId,
-		Fqdn:           deleteEntryFqdn,
+		AppInstanceId:	deleteEntryAppInstanceId,
 	}
 
 	_, err = client.DeleteDNSEntry(context.Background(), &request)
 	if err != nil {
-		log.Error().Err(err).Msgf("error deleting dns register %s", deleteEntryFqdn)
+		log.Error().Err(err).Msgf("error deleting dns register for appId", deleteEntryAppInstanceId)
 		return
 	}
 

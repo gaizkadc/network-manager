@@ -8,6 +8,12 @@ import (
 	"github.com/hashicorp/consul/api"
 	"github.com/nalej/derrors"
 	"github.com/rs/zerolog/log"
+	"fmt"
+)
+
+const (
+	// Port exposing the ConsulDNS service
+	ConsulDNSPort = 8500
 )
 
 type ConsulClient struct {
@@ -26,12 +32,16 @@ func NewConsulClient(address string) (*ConsulClient, derrors.Error) {
 	return &ConsulClient{client: *client}, nil
 }
 
-func (a *ConsulClient) Add(organizationId string, fqdn string, ip string) derrors.Error {
+func (a *ConsulClient) Add(organizationId string, appInstanceId string, fqdn string, ip string) derrors.Error {
+
 	entry := &api.AgentServiceRegistration{
-		Kind:    api.ServiceKind(organizationId),
+		//Kind:    api.ServiceKind(appInstanceId),
 		Name:    fqdn,
 		Address: ip,
+		Tags: []string{organizationId, appInstanceId},
+		//ID: fmt.Sprintf("%s-%s",appInstanceId,organizationId),
 	}
+
 	err := a.client.Agent().ServiceRegister(entry)
 
 	if err != nil {
@@ -42,12 +52,61 @@ func (a *ConsulClient) Add(organizationId string, fqdn string, ip string) derror
 	return nil
 }
 
-func (a *ConsulClient) Delete(serviceID string) derrors.Error {
-	err := a.client.Agent().ServiceDeregister(serviceID)
+func (a *ConsulClient) Delete(organizationId string, appInstanceId string) derrors.Error {
+
+	// The current consul API does not filter services by tag
+	// https://github.com/hashicorp/consul/issues/4811
+	// The workaround is to get all the available services from the catalog and
+	// remove those matching the tags
+
+	q := api.QueryOptions{}
+	services, _, err := a.client.Catalog().Services(&q)
 
 	if err != nil {
-		log.Error().Msg("Could not deregister service")
-		return derrors.NewGenericError(err.Error())
+		log.Error().Err(err).Msg("impossible to build DNS query")
+		return derrors.NewGenericError("impossible to build DNS query", err)
+	}
+
+	toDelete := make([]string,0)
+	for serviceId, tags := range services {
+		// check if organizationId and appInstanceId are in the tags
+		foundOrg := false
+		foundApp := false
+		for _, t := range tags {
+			if t == organizationId {
+				foundOrg = true
+			}
+			if t == appInstanceId {
+				foundApp = true
+			}
+		}
+		// if found, this entry has to be deleted
+		if foundOrg && foundApp {
+			toDelete = append(toDelete, serviceId)
+		}
+	}
+
+	log.Debug().Msgf("%d service entries to be deleted", len(toDelete))
+	for _, serviceId := range toDelete {
+		// find in what node is the service registered
+		serv, _, err := a.client.Catalog().Service(serviceId,"",&q)
+		if err != nil {
+			log.Error().Err(err).Msgf("impossible to retrieve information for service %s", serviceId)
+			return derrors.NewGenericError("impossible to retrieve service information", err)
+		}
+		for _, servEntry := range serv {
+			// build the client for the specific node
+			config := api.DefaultConfig()
+			config.Address = fmt.Sprintf("%s:%d",servEntry.Address, ConsulDNSPort)
+			auxCli, err := api.NewClient(config)
+			log.Debug().Msgf("delete service %s", servEntry.ServiceID)
+			err = auxCli.Agent().ServiceDeregister(servEntry.ServiceID)
+
+			if err != nil {
+				log.Error().Err(err).Msgf("impossible to retrieve information for service %s", serviceId)
+			}
+		}
+
 	}
 
 	return nil

@@ -25,7 +25,7 @@ func NewManager(consulClient *consul.ConsulClient) (*Manager, derrors.Error) {
 
 // AddDNSEntry
 func (m *Manager) AddDNSEntry(entry *grpc_network_go.AddDNSEntryRequest) derrors.Error {
-	err := m.client.Add(entry.OrganizationId, entry.Fqdn, entry.Ip)
+	err := m.client.Add(entry.OrganizationId, entry.AppInstanceId, entry.Fqdn, entry.Ip)
 
 	if err != nil {
 		log.Error().Msg("Unable to add DNS entry to the system")
@@ -37,7 +37,7 @@ func (m *Manager) AddDNSEntry(entry *grpc_network_go.AddDNSEntryRequest) derrors
 
 // DeleteDNSEntry
 func (m *Manager) DeleteDNSEntry(entry *grpc_network_go.DeleteDNSEntryRequest) derrors.Error {
-	err := m.client.Delete(entry.Fqdn)
+	err := m.client.Delete(entry.OrganizationId, entry.AppInstanceId)
 
 	if err != nil {
 		log.Error().Msg("Unable to delete DNS entry from the system")
