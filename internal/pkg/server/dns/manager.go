@@ -37,7 +37,7 @@ func (m *Manager) AddDNSEntry(entry *grpc_network_go.AddDNSEntryRequest) derrors
 
 // DeleteDNSEntry
 func (m *Manager) DeleteDNSEntry(entry *grpc_network_go.DeleteDNSEntryRequest) derrors.Error {
-	err := m.client.Delete(entry.Fqdn,entry.OrganizationId, entry.AppInstanceId)
+	err := m.client.Delete(entry.OrganizationId, entry.AppInstanceId)
 
 	if err != nil {
 		log.Error().Msg("Unable to delete DNS entry from the system")

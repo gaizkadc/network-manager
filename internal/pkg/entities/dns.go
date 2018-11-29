@@ -57,6 +57,5 @@ func AddDNSRequestToEntry(e *grpc_network_go.AddDNSEntryRequest) *grpc_network_g
 func DeleteDNSRequestToEntry(e *grpc_network_go.DeleteDNSEntryRequest) *grpc_network_go.DNSEntry {
 	return &grpc_network_go.DNSEntry{
 		OrganizationId: e.OrganizationId,
-		Fqdn:           e.Fqdn,
 	}
 }

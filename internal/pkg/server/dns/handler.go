@@ -46,16 +46,9 @@ func (h *Handler) AddDNSEntry(ctx context.Context, entry *grpc_network_go.AddDNS
 
 func (h *Handler) DeleteDNSEntry(ctx context.Context, entry *grpc_network_go.DeleteDNSEntryRequest) (*grpc_common_go.Success, error) {
 	log.Debug().Str("organizationId", entry.OrganizationId).
-		Str("fqdn", entry.Fqdn).Msg("delete dns entry")
+		Str("appId", entry.AppInstanceId).Msg("delete dns entry")
 
-	aux := entities.DeleteDNSRequestToEntry(entry)
-	err := entities.ValidFQDN(aux)
-	if err != nil {
-		log.Error().Msgf("Invalid FQDN: %s", err.Error())
-		return nil, conversions.ToGRPCError(err)
-	}
-
-	err = h.Manager.DeleteDNSEntry(entry)
+	err := h.Manager.DeleteDNSEntry(entry)
 	if err != nil {
 		log.Error().Msgf("Unable to delete DNS entry: %s", err.Error())
 		return nil, conversions.ToGRPCError(err)

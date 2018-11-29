@@ -11,6 +11,11 @@ import (
 	"fmt"
 )
 
+const (
+	// Port exposing the ConsulDNS service
+	ConsulDNSPort = 8500
+)
+
 type ConsulClient struct {
 	client api.Client
 }
@@ -30,11 +35,11 @@ func NewConsulClient(address string) (*ConsulClient, derrors.Error) {
 func (a *ConsulClient) Add(organizationId string, appInstanceId string, fqdn string, ip string) derrors.Error {
 
 	entry := &api.AgentServiceRegistration{
-		//Kind:    api.ServiceKind(organizationId),
+		Kind:    api.ServiceKind(appInstanceId),
 		Name:    fqdn,
 		Address: ip,
 		Tags: []string{organizationId, appInstanceId},
-		//ID: fmt.Sprintf("%s-%s",appInstanceId,organizationId),
+		ID: fmt.Sprintf("%s-%s",appInstanceId,organizationId),
 	}
 
 	err := a.client.Agent().ServiceRegister(entry)
@@ -47,55 +52,62 @@ func (a *ConsulClient) Add(organizationId string, appInstanceId string, fqdn str
 	return nil
 }
 
-func (a *ConsulClient) Delete(serviceID string, organizationId string, appInstanceId string) derrors.Error {
-	/*
-	err := a.client.Agent().ServiceDeregister(serviceID)
+func (a *ConsulClient) Delete(organizationId string, appInstanceId string) derrors.Error {
 
-	if err != nil {
-		log.Error().Msg("Could not deregister service")
-		return derrors.NewGenericError(err.Error())
-	}
-	return nil
-	*/
+	// The current consul API does not filter services by tag
+	// https://github.com/hashicorp/consul/issues/4811
+	// The workaround is to get all the available services from the catalog and
+	// remove those matching the tags
 
 	q := api.QueryOptions{}
-	cat, _, err := a.client.Catalog().ServiceMultipleTags(serviceID,[]string{organizationId, appInstanceId},&q)
+	services, _, err := a.client.Catalog().Services(&q)
 
 	if err != nil {
 		log.Error().Err(err).Msg("impossible to build DNS query")
 		return derrors.NewGenericError("impossible to build DNS query", err)
 	}
 
-	log.Debug().Msgf("found %d DNS entries to be deleted", len(cat))
-
-	for _,serv := range cat {
-		log.Debug().Msgf("deregister service %s from address %s", serv.ServiceID, serv.Address)
-		// Create a client to deregister from the original agent that registered the service.
-		config := api.DefaultConfig()
-		config.Address = fmt.Sprintf("%s:8500",serv.Address)
-		auxCli, err := api.NewClient(config)
-
-		if err != nil {
-			log.Error().Err(err).Msgf("impossible to create client to connect to %s", serv.Address)
+	toDelete := make([]string,0)
+	for serviceId, tags := range services {
+		// check if organizationId and appInstanceId are in the tags
+		foundOrg := false
+		foundApp := false
+		for _, t := range tags {
+			if t == organizationId {
+				foundOrg = true
+			}
+			if t == appInstanceId {
+				foundApp = true
+			}
 		}
-
-		err = auxCli.Agent().ServiceDeregister(serv.ServiceID)
-
-		dereg := api.CatalogDeregistration{
-			ServiceID: serv.ServiceID,
-			Datacenter: serv.Datacenter,
-			Node: serv.Node,
-			Address: serv.Address,
+		// if found, this entry has to be deleted
+		if foundOrg && foundApp {
+			toDelete = append(toDelete, serviceId)
 		}
-		q := api.WriteOptions{Datacenter:"dc1"}
-		_, err = auxCli.Catalog().Deregister(&dereg,&q)
+	}
 
+	log.Debug().Msgf("%d service entries to be deleted", len(toDelete))
+	for _, serviceId := range toDelete {
+		// find in what node is the service registered
+		serv, _, err := a.client.Catalog().Service(serviceId,"",&q)
 		if err != nil {
-			log.Error().Err(err).Msgf("error deleting DNS entry %s", serv.ServiceID)
+			log.Error().Err(err).Msgf("impossible to retrieve information for service %s", serviceId)
+			return derrors.NewGenericError("impossible to retrieve service information", err)
+		}
+		for _, servEntry := range serv {
+			// build the client for the specific node
+			config := api.DefaultConfig()
+			config.Address = fmt.Sprintf("%s:%d",servEntry.Address, ConsulDNSPort)
+			auxCli, err := api.NewClient(config)
+			log.Debug().Msgf("delete service %s", servEntry.ServiceID)
+			err = auxCli.Agent().ServiceDeregister(servEntry.ServiceID)
+
+			if err != nil {
+				log.Error().Err(err).Msgf("impossible to retrieve information for service %s", serviceId)
+			}
 		}
 
 	}
-
 
 	return nil
 }
