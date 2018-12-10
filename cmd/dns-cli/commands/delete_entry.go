@@ -6,6 +6,7 @@ package commands
 
 import (
 	"context"
+
 	"github.com/nalej/grpc-network-go"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -52,12 +53,12 @@ func deleteEntry() {
 
 	request := grpc_network_go.DeleteDNSEntryRequest{
 		OrganizationId: deleteEntryOrganizationId,
-		AppInstanceId:	deleteEntryAppInstanceId,
+		AppInstanceId:  deleteEntryAppInstanceId,
 	}
 
 	_, err = client.DeleteDNSEntry(context.Background(), &request)
 	if err != nil {
-		log.Error().Err(err).Msgf("error deleting dns register for appId", deleteEntryAppInstanceId)
+		log.Error().Err(err).Msgf("error deleting dns register for appId %s", deleteEntryAppInstanceId)
 		return
 	}
 
