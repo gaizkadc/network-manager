@@ -39,6 +39,8 @@ spec:
         - name: dev-net-tun
           readOnly: true
           mountPath: /dev/net/tun
+        - name: data-network-manager
+          mountPath: /mnt/data
       imagePullSecrets:
       - name: nalej-registry
       volumes:
