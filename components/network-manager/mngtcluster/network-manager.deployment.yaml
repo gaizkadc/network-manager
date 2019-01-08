@@ -47,3 +47,6 @@ spec:
       - name: dev-net-tun
         hostPath:
           path: /dev/net/tun
+      - name: data-network-manager
+        hostPath:
+          path: /mnt/data
