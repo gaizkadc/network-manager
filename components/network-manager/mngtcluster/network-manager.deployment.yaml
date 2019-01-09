@@ -26,7 +26,7 @@ spec:
       containers:
       - name: network-manager
         image: nalejregistry.azurecr.io/nalej/network-manager:VERSION
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         args:
           - "run"
           - "--dnsurl=http://dns-server-ui.nalej:80"
@@ -39,9 +39,14 @@ spec:
         - name: dev-net-tun
           readOnly: true
           mountPath: /dev/net/tun
+        - name: data-network-manager
+          mountPath: /var/lib/zerotier-one
       imagePullSecrets:
       - name: nalej-registry
       volumes:
       - name: dev-net-tun
         hostPath:
           path: /dev/net/tun
+      - name: data-network-manager
+        persistentVolumeClaim:
+          claimName: data-network-manager

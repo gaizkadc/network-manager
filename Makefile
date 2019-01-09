@@ -126,6 +126,9 @@ create-image:
 	for app in $(APPS); do \
         echo Create image of app $$app ; \
         if [ -f components/"$$app"/Dockerfile ]; then \
+            if [ -d components/"$$app"/dockerenv ]; then \
+            	cp -rv components/"$$app"/dockerenv $(TARGET)/linux_amd64/. ; \
+            fi ; \
             docker build --no-cache -t $(DOCKER_REGISTRY)/$(DOCKER_REPO)/"$$app":$(VERSION) -f components/"$$app"/Dockerfile $(TARGET)/linux_amd64 ; \
 			echo Built $$app Docker image ; \
         else  \
