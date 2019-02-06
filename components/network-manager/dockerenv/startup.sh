@@ -9,7 +9,6 @@ wait_file() {
   echo "File $1 found"
 }
 
-
 export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin
 
 if [ ! -e /dev/net/tun ]; then
@@ -19,6 +18,17 @@ fi
 
 #echo "Stop zerotier service..."
 service zerotier-one stop
+
+echo "Deleting /var/lib/zerotier-one"
+rm -rf /var/lib/zerotier-one
+echo "Creating /var/lib/zerotier-one"
+mkdir /var/lib/zerotier-one
+echo "Copying planet"
+cp /zt/planet/planet /var/lib/zerotier-one/planet
+echo "Copying identity.secret"
+cp /zt/identity-secret/identity.secret /var/lib/zerotier-one/identity.secret
+echo "Copying identity.public"
+cp /zt/identity-public/identity.public /var/lib/zerotier-one/identity.public
 
 echo "Set permission to /dev/net/tun"
 # This is a workaround depicted in https://github.com/zerotier/ZeroTierOne/issues/699
