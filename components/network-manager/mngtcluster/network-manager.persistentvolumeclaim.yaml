@@ -5,7 +5,7 @@ metadata:
     cluster: management
     component: network-manager
   name: data-network-manager
-  namespace: nalej
+  namespace: __NPH_NAMESPACE
 spec:
   accessModes:
   - ReadWriteOnce

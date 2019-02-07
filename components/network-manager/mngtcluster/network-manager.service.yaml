@@ -2,7 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: network-manager
-  namespace: nalej
+  namespace: __NPH_NAMESPACE
   labels:
     cluster: management
     component: network-manager
