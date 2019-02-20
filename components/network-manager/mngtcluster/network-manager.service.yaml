@@ -15,3 +15,8 @@ spec:
   - protocol: TCP
     port: 8000
     targetPort: 8000
+    name: grpc
+  - protocol: UDP
+    port: 9993
+    targetPort: 9993
+    name: zt
