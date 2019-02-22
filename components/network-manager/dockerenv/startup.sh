@@ -19,12 +19,12 @@ fi
 #echo "Stop zerotier service..."
 service zerotier-one stop
 
-echo "Deleting /var/lib/zerotier-one"
-rm -rf /var/lib/zerotier-one
-echo "Creating /var/lib/zerotier-one"
-mkdir /var/lib/zerotier-one
 
 if [ "${USE_NALEJ_PLANET}" == "true" ]; then
+    echo "Deleting /var/lib/zerotier-one"
+    rm -rf /var/lib/zerotier-one
+    echo "Creating /var/lib/zerotier-one"
+    mkdir /var/lib/zerotier-one
     echo "Copying planet"
     cp /zt/planet/planet /var/lib/zerotier-one/planet
     echo "Copying identity.secret"
