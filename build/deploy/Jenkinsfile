@@ -19,6 +19,11 @@ pipeline {
         stage("Render YAML files") {
             steps { container("kubectl") { stepRenderK8SYAMLFiles packagePath, yamlPath, appsList, params.namespace } }
         }
+        stage("Create ZeroTier secrets") {
+            steps { container("kubectl") { stepCreateK8SSecret packagePath, params.namespace, "zt-identity-public", [test: "test"] } }
+            steps { container("kubectl") { stepCreateK8SSecret packagePath, params.namespace, "zt-identity-secret", [test: "test"] } }
+            steps { container("kubectl") { stepCreateK8SSecret packagePath, params.namespace, "zt-planet", [test: "test"] } }
+        }
         stage("Create Kubernetes resources") {
             steps { container("kubectl") { stepCreateK8SResources yamlPath } }
         }
