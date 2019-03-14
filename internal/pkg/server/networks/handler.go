@@ -24,8 +24,7 @@ func NewHandler(manager Manager) *Handler {
 
 // AddNetwork adds a network to the system.
 func (h *Handler) AddNetwork(ctx context.Context, addNetworkRequest *grpc_network_go.AddNetworkRequest) (*grpc_network_go.Network, error) {
-	log.Debug().Str("organizationID", addNetworkRequest.OrganizationId).
-		Str("networkName", addNetworkRequest.Name).Msg("add network")
+	log.Debug().Interface("addNetworkRequest",addNetworkRequest).Msg("add network")
 	err := entities.ValidAddNetworkRequest(addNetworkRequest)
 	if err != nil {
 		return nil, conversions.ToGRPCError(err)
@@ -61,7 +60,7 @@ func (h *Handler) GetNetwork(ctx context.Context, networkID *grpc_network_go.Net
 // DeleteNetwork deletes a network from the system.
 func (h *Handler) DeleteNetwork(ctx context.Context, deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) (*grpc_common_go.Success, error) {
 	log.Debug().Str("organizationID", deleteNetworkRequest.OrganizationId).
-		Str("networkID", deleteNetworkRequest.NetworkId).Msg("delete network")
+		Str("appInstanceId", deleteNetworkRequest.AppInstanceId).Msg("delete network")
 	err := entities.ValidDeleteNetworkRequest(deleteNetworkRequest)
 	if err != nil {
 		return nil, conversions.ToGRPCError(err)
@@ -71,7 +70,7 @@ func (h *Handler) DeleteNetwork(ctx context.Context, deleteNetworkRequest *grpc_
 	if err != nil {
 		return nil, conversions.ToGRPCError(err)
 	}
-	log.Debug().Str("networkID", deleteNetworkRequest.NetworkId).Msg("network deleted")
+	log.Debug().Str("appInstanceId", deleteNetworkRequest.AppInstanceId).Msg("network deleted")
 
 	return &grpc_common_go.Success{}, nil
 }

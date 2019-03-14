@@ -32,14 +32,14 @@ func (s *Server) Launch() {
 		log.Fatal().Errs("failed to listen: %v", []error{err})
 	}
 
-	orgConn, err := grpc.Dial(s.Configuration.SystemModelURL, grpc.WithInsecure())
+	smConn, err := grpc.Dial(s.Configuration.SystemModelURL, grpc.WithInsecure())
 	if err != nil {
 		log.Fatal().Msgf("impossible to establish connection with %s", s.Configuration.SystemModelURL)
 		return
 	}
 
 	// Instantiate network manager
-	netManager, err := networks.NewManager(orgConn, s.Configuration.ZTUrl, s.Configuration.ZTAccessToken)
+	netManager, err := networks.NewManager(smConn, s.Configuration.ZTUrl, s.Configuration.ZTAccessToken)
 
 	if err != nil {
 		log.Fatal().Msg("failed creating network manager")

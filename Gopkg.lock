@@ -132,6 +132,14 @@
   version = "v1.4.0"
 
 [[projects]]
+  digest = "1:8c1a7d5a21f1e81424d839206b53050da4b9f2083b628aea55ea5e9edbfeacb0"
+  name = "github.com/nalej/grpc-application-go"
+  packages = ["."]
+  pruneopts = ""
+  revision = "81451d42ba2a7d2ce62538acf5cad6aa347acbb7"
+  version = "v0.0.62"
+
+[[projects]]
   digest = "1:553e0a6941f0dd6a5f61975032c4a3933a40e910c45b41cfae4b7ee2a946e1ca"
   name = "github.com/nalej/grpc-common-go"
   packages = ["."]
@@ -140,12 +148,12 @@
   version = "v0.0.29"
 
 [[projects]]
-  digest = "1:06946c8f73e61dd1585d9de58d7c89d4acc28a868c7531f86113eb46bc3a8adf"
+  digest = "1:031b9144b9c2321b929d898bd6b335c93288d3fa4f4ea85f1a00d48d437b2334"
   name = "github.com/nalej/grpc-network-go"
   packages = ["."]
   pruneopts = ""
-  revision = "b206784fef662f5daafa38306b9cbe6d9a0d4db3"
-  version = "v0.0.30"
+  revision = "2c104433588c682fe46f5c8abdededfdb462f630"
+  version = "v0.0.31"
 
 [[projects]]
   digest = "1:9921e275160e1559963d6452a918027db3563746fd03f63369ab104c0fbf16bf"
@@ -322,6 +330,7 @@
     "github.com/hashicorp/consul/api",
     "github.com/nalej/derrors",
     "github.com/nalej/dhttp",
+    "github.com/nalej/grpc-application-go",
     "github.com/nalej/grpc-common-go",
     "github.com/nalej/grpc-network-go",
     "github.com/nalej/grpc-organization-go",

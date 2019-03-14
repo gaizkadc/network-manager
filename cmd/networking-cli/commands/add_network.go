@@ -15,8 +15,8 @@ import (
 // GRPC server address
 var addNetworkServer string
 
-// Network name
-var addNetworkName string
+// Application instance id
+var appInstanceId string
 
 // Organization ID
 var addNetworkOrgId string
@@ -34,9 +34,10 @@ var addNetworkCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(addNetworkCmd)
 	addNetworkCmd.Flags().StringVar(&addNetworkServer, "server", "localhost:8000", "Networking manager server URL")
-	addNetworkCmd.Flags().StringVar(&addNetworkName, "name", "mynetwork", "Name of the network to be added")
+	addNetworkCmd.Flags().StringVar(&appInstanceId, "appinstanceid", "", "Application instance id")
 	addNetworkCmd.Flags().StringVar(&addNetworkOrgId, "orgid", "", "Organization ID")
 	addNetworkCmd.MarkFlagRequired("orgid")
+	addNetworkCmd.MarkFlagRequired("appinstanceid")
 }
 
 func addNetwork() {
@@ -50,13 +51,14 @@ func addNetwork() {
 	client := grpc_network_go.NewNetworksClient(conn)
 
 	request := grpc_network_go.AddNetworkRequest{
-		Name:           addNetworkName,
+		Name:           appInstanceId,
 		OrganizationId: addNetworkOrgId,
+		AppInstanceId:  appInstanceId,
 	}
 
 	addedNetwork, err := client.AddNetwork(context.Background(), &request)
 	if err != nil {
-		log.Error().Err(err).Msgf("error adding network %s", addNetworkName)
+		log.Error().Err(err).Msg("error adding network")
 		return
 	}
 
