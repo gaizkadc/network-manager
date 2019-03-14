@@ -9,6 +9,7 @@ import (
 	"github.com/nalej/derrors"
 	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-organization-go"
+	"github.com/nalej/grpc-application-go"
 	"github.com/nalej/network-manager/internal/pkg/entities"
 	"github.com/nalej/network-manager/internal/pkg/zt"
 	"github.com/rs/zerolog/log"
@@ -19,12 +20,15 @@ import (
 type Manager struct {
 	//NetworkProvider network.Provider
 	OrganizationClient grpc_organization_go.OrganizationsClient
+	ApplicationClient grpc_application_go.ApplicationsClient
 	ZTClient           *zt.ZTClient
 }
 
 // NewManager creates a new manager.
 func NewManager(organizationConn *grpc.ClientConn, url string, accessToken string) (*Manager, error) {
 	orgClient := grpc_organization_go.NewOrganizationsClient(organizationConn)
+	appClient := grpc_application_go.NewApplicationsClient(organizationConn)
+
 	ztClient, err := zt.NewZTClient(url, accessToken)
 
 	if err != nil {
@@ -34,6 +38,7 @@ func NewManager(organizationConn *grpc.ClientConn, url string, accessToken strin
 
 	return &Manager{
 		OrganizationClient: orgClient,
+		ApplicationClient: appClient,
 		ZTClient:           ztClient,
 	}, nil
 }
@@ -48,6 +53,13 @@ func (m *Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkReques
 		return nil, derrors.NewNotFoundError("invalid organizationID", err)
 	}
 
+	// Check if application exists
+	_, err = m.ApplicationClient.GetAppInstance(context.Background(),&grpc_application_go.AppInstanceId{
+		OrganizationId: addNetworkRequest.OrganizationId, AppInstanceId: addNetworkRequest.AppInstanceId})
+	if err != nil {
+		return nil, derrors.NewNotFoundError("not found application instance")
+	}
+
 	// use zt client to add network
 	ztNetwork, err := m.ZTClient.Add(addNetworkRequest.Name, addNetworkRequest.OrganizationId)
 
@@ -56,6 +68,17 @@ func (m *Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkReques
 	}
 
 	toAdd := ztNetwork.ToNetwork(addNetworkRequest.OrganizationId)
+
+	// the network generation was correct, add the entry to the system model
+	netReq := grpc_application_go.AddAppZtNetworkRequest{
+		OrganizationId: addNetworkRequest.OrganizationId,
+		AppInstanceId: addNetworkRequest.AppInstanceId,
+		NetworkId: toAdd.NetworkId,
+	}
+	_, err = m.ApplicationClient.AddAppZtNetwork(context.Background(), &netReq)
+	if err != nil {
+		return nil, derrors.NewUnavailableError("impossible to add zt network to system model", err)
+	}
 
 	return &toAdd, nil
 }
@@ -69,8 +92,26 @@ func (m *Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNetw
 		return derrors.NewNotFoundError("invalid organizationID", err)
 	}
 
+	// get the entry from the system model
+	ztNetwork, err := m.ApplicationClient.GetAppZtNetwork(context.Background(),
+		&grpc_application_go.GetAppZtNetworkRequest{
+			OrganizationId: deleteNetworkRequest.OrganizationId,
+			AppInstanceId: deleteNetworkRequest.AppInstanceId})
+	if err != nil {
+		return derrors.NewInternalError("impossible to get network id to delete", err)
+	}
+
+	// delete from the system model
+	req := grpc_application_go.RemoveAppZtNetworkRequest{
+		OrganizationId: deleteNetworkRequest.OrganizationId,
+		AppInstanceId: deleteNetworkRequest.AppInstanceId}
+	_, err = m.ApplicationClient.RemoveAppZtNetwork(context.Background(), &req)
+	if err != nil {
+		log.Error().Err(err).Msg("impossible to delete zt network from system model")
+	}
+
 	// Use zt client to delete network
-	err = m.ZTClient.Delete(deleteNetworkRequest.NetworkId, deleteNetworkRequest.OrganizationId)
+	err = m.ZTClient.Delete(ztNetwork.NetworkId, deleteNetworkRequest.OrganizationId)
 	if err != nil {
 		return derrors.NewGenericError("Cannot delete ZeroTier network", err)
 	}

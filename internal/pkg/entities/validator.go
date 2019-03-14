@@ -16,13 +16,14 @@ const (
 	emptyNetworkName    = "network_name cannot be empty"
 	emptyFQDN           = "FQDN cannot be empty"
 	emptyMemberId       = "Member ID cannot be empty"
+	emptyAppId          = "Application instance ID cannot be empty"
 )
 
 func ValidAddNetworkRequest(addNetworkRequest *grpc_network_go.AddNetworkRequest) derrors.Error {
 	if addNetworkRequest.OrganizationId == "" {
 		return derrors.NewInvalidArgumentError(emptyOrganizationId)
-	} else if addNetworkRequest.Name == "" {
-		return derrors.NewInvalidArgumentError(emptyNetworkName)
+	} else if addNetworkRequest.AppInstanceId == "" {
+		return derrors.NewInvalidArgumentError(emptyAppId)
 	}
 	return nil
 }
@@ -52,7 +53,7 @@ func ValidDeleteNetworkRequest(deleteNetworkRequest *grpc_network_go.DeleteNetwo
 	if deleteNetworkRequest.OrganizationId == "" {
 		return derrors.NewInvalidArgumentError(emptyOrganizationId)
 	}
-	if deleteNetworkRequest.NetworkId == "" {
+	if deleteNetworkRequest.AppInstanceId == "" {
 		return derrors.NewInvalidArgumentError(emptyNetworkId)
 	}
 	return nil

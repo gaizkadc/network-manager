@@ -16,7 +16,7 @@ import (
 var delNetworkServer string
 
 // Network name
-var delNetworkId string
+var delAppInstanceId string
 
 // Organization ID
 var delNetworkOrgId string
@@ -34,9 +34,9 @@ var delNetworkCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(delNetworkCmd)
 	delNetworkCmd.Flags().StringVar(&delNetworkServer, "server", "localhost:8000", "Networking manager server URL")
-	delNetworkCmd.Flags().StringVar(&delNetworkId, "netid", "", "Network ID")
+	delNetworkCmd.Flags().StringVar(&delAppInstanceId, "appinstanceid", "", "Application instance id")
 	delNetworkCmd.Flags().StringVar(&delNetworkOrgId, "orgid", "", "Organization ID")
-	delNetworkCmd.MarkFlagRequired("netid")
+	delNetworkCmd.MarkFlagRequired("appinstanceid")
 	delNetworkCmd.MarkFlagRequired("orgid")
 }
 
@@ -51,13 +51,13 @@ func delNetwork() {
 	client := grpc_network_go.NewNetworksClient(conn)
 
 	request := grpc_network_go.DeleteNetworkRequest{
-		NetworkId:      delNetworkId,
+		AppInstanceId:  appInstanceId,
 		OrganizationId: delNetworkOrgId,
 	}
 
 	_, err = client.DeleteNetwork(context.Background(), &request)
 	if err != nil {
-		log.Error().Err(err).Msgf("error deleting network %s", delNetworkId)
+		log.Error().Err(err).Msgf("error deleting network %s", delAppInstanceId)
 		return
 	}
 
