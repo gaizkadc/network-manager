@@ -81,7 +81,7 @@ func (ztc *ZTClient) Add(networkName string, organizationId string) (*ZTNetwork,
 		IpAssignmentPools: []IpAssignmentPool{
             {
                 IpRangeStart: "192.168.0.1",
-                IpRangeEnd: "192.168.255.254",
+                IpRangeEnd: "192.168.15.254",
             },
             /*
 		    {
@@ -101,7 +101,7 @@ func (ztc *ZTClient) Add(networkName string, organizationId string) (*ZTNetwork,
 		},
         */
 		Routes: []Route{
-		    {Target: "192.168.0.0/16"},
+		    {Target: "192.168.0.0/20"},
         },
 	}
 
