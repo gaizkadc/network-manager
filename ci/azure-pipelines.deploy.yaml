@@ -20,10 +20,6 @@ resources:
       type: github
       name: nalej/ci-templates
       endpoint: nalej
-    - repository: scylla_deploy
-      type: github
-      name: nalej/scylla-deploy
-      endpoint: nalej
 
 jobs:
 - job: DeployComponent
