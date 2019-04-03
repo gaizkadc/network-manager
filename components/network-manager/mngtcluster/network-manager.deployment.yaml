@@ -24,47 +24,47 @@ spec:
         component: network-manager
     spec:
       containers:
-      - name: network-manager
-        image: __NPH_REGISTRY.azurecr.io/__NPH_REGISTRY_NAMESPACE/network-manager:__NPH_VERSION
-        imagePullPolicy: Always
-        args:
-          - "run"
-          - "--dnsurl=http://dns-server-ui.__NPH_NAMESPACE:80"
-          - "--sm=system-model.__NPH_NAMESPACE:8800"
-          - "--zturl=http://localhost:9993"
-          - "--debug"
-        securityContext:
-          runAsUser: 0
-        volumeMounts:
-        - name: dev-net-tun
-          readOnly: true
-          mountPath: /dev/net/tun
-        - name: data-network-manager
-          mountPath: /var/lib/zerotier-one
-        - name: zt-planet
-          mountPath: /zt/planet
-          readOnly: true
-        - name: zt-identity-public
-          mountPath: /zt/identity-public
-          readOnly: true
-        - name: zt-identity-secret
-          mountPath: /zt/identity-secret
-          readOnly: true
+        - name: network-manager
+          image: __NPH_REGISTRY/__NPH_REGISTRY_NAMESPACE/network-manager:__NPH_VERSION
+          imagePullPolicy: Always
+          args:
+            - "run"
+            - "--dnsurl=http://dns-server-ui.__NPH_NAMESPACE:80"
+            - "--sm=system-model.__NPH_NAMESPACE:8800"
+            - "--zturl=http://localhost:9993"
+            - "--debug"
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: dev-net-tun
+              readOnly: true
+              mountPath: /dev/net/tun
+            - name: data-network-manager
+              mountPath: /var/lib/zerotier-one
+            - name: zt-planet
+              mountPath: /zt/planet
+              readOnly: true
+            - name: zt-identity-public
+              mountPath: /zt/identity-public
+              readOnly: true
+            - name: zt-identity-secret
+              mountPath: /zt/identity-secret
+              readOnly: true
       imagePullSecrets:
-      - name: nalej-registry
+        - name: nalej-registry
       volumes:
-      - name: dev-net-tun
-        hostPath:
-          path: /dev/net/tun
-      - name: data-network-manager
-        persistentVolumeClaim:
-          claimName: data-network-manager
-      - name: zt-planet
-        secret:
-          secretName: zt-planet
-      - name: zt-identity-public
-        secret:
-          secretName: zt-identity-public
-      - name: zt-identity-secret
-        secret:
-          secretName: zt-identity-secret
+        - name: dev-net-tun
+          hostPath:
+            path: /dev/net/tun
+        - name: data-network-manager
+          persistentVolumeClaim:
+            claimName: data-network-manager
+        - name: zt-planet
+          secret:
+            secretName: zt-planet
+        - name: zt-identity-public
+          secret:
+            secretName: zt-identity-public
+        - name: zt-identity-secret
+          secret:
+            secretName: zt-identity-secret
