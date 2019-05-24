@@ -130,3 +130,56 @@ func (a *ConsulClient) List(serviceKind string) ([]Service, derrors.Error) {
 
 	return serviceList, nil
 }
+
+//
+// Generic entries
+//
+
+func (a * ConsulClient) getGenericID(organizationID string, fqdn string) string{
+	return fmt.Sprintf("%s-%s", organizationID, fqdn)
+}
+
+func (a * ConsulClient) AddGenericEntry(organizationID string, fqdn string, ip string, tags ...string) derrors.Error{
+	entryTags := []string{organizationID}
+	entryTags = append(entryTags, tags...)
+	entry := &api.AgentServiceRegistration{
+		ID: a.getGenericID(organizationID, fqdn),
+		Name:    fqdn,
+		Address: ip,
+		Tags: entryTags,
+	}
+
+	err := a.client.Agent().ServiceRegister(entry)
+
+	if err != nil {
+		log.Error().Str("err", err.Error()).Msg("Cannot add generic entry")
+		return derrors.NewGenericError(err.Error())
+	}
+
+	return nil
+}
+
+func (a * ConsulClient) DeleteGenericEntry(organizationID string, fqdn string) derrors.Error{
+	serviceID := a.getGenericID(organizationID, fqdn)
+	q := api.QueryOptions{}
+
+	// find in what node is the service registered
+	serv, _, err := a.client.Catalog().Service(serviceID,"",&q)
+	if err != nil {
+		log.Error().Err(err).Msgf("impossible to retrieve information for service %s", serviceID)
+		return derrors.NewGenericError("impossible to retrieve service information", err)
+	}
+	for _, servEntry := range serv {
+		// build the client for the specific node
+		config := api.DefaultConfig()
+		config.Address = fmt.Sprintf("%s:%d",servEntry.Address, ConsulDNSPort)
+		auxCli, err := api.NewClient(config)
+		log.Debug().Str("address", servEntry.Address).Str("serviceID", servEntry.ServiceID).Msgf("delete service")
+		err = auxCli.Agent().ServiceDeregister(servEntry.ServiceID)
+
+		if err != nil {
+			log.Error().Err(err).Msgf("impossible to retrieve information for service %s", serviceID)
+		}
+	}
+	return nil
+}

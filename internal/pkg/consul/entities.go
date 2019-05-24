@@ -23,3 +23,9 @@ func ServiceFromConsulAPI(s *api.AgentService) Service {
 		Address: s.Address,
 	}
 }
+
+type GenericEntry struct{
+	Fqdn string
+	IP string
+	Tags []string
+}
