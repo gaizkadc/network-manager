@@ -7,6 +7,7 @@ import (
 	"github.com/nalej/network-manager/internal/pkg/consul"
 	"github.com/nalej/network-manager/internal/pkg/server/dns"
 	"github.com/nalej/network-manager/internal/pkg/server/networks"
+	"github.com/nalej/network-manager/internal/pkg/server/servicedns"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -63,10 +64,15 @@ func (s *Server) Launch() {
 
 	dnsHandler := dns.NewHandler(*dnsManager)
 
+	// ServiceDNS
+	servDNSManager := servicedns.NewManager(consulClient)
+	servDNSHandler := servicedns.NewHandler(servDNSManager)
+
 	// gRPC Server
 	grpcServer := grpc.NewServer()
 	grpc_network_go.RegisterNetworksServer(grpcServer, netHandler)
 	grpc_network_go.RegisterDNSServer(grpcServer, dnsHandler)
+	grpc_network_go.RegisterServiceDNSServer(grpcServer, servDNSHandler)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(grpcServer)
