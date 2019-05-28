@@ -32,6 +32,7 @@ spec:
             - "--dnsurl=http://dns-server-ui.__NPH_NAMESPACE:80"
             - "--sm=system-model.__NPH_NAMESPACE:8800"
             - "--zturl=http://localhost:9993"
+            - "--queueAddress=broker.__NPH_NAMESPACE:6650"
             - "--debug"
           securityContext:
             runAsUser: 0
