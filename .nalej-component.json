@@ -1,13 +1,13 @@
 {
-    "language": "golang",
-    "application_list": [
-        "network-manager",
-        "networking-cli",
-        "dns-cli"
-    ],
-    "tools": [
-        "azure",
-        "docker",
-        "k8s"
-    ]
+  "language": "golang",
+  "application_list": [
+    "network-manager",
+    "networking-cli",
+    "dns-cli"
+  ],
+  "tools": [
+    "azure",
+    "docker",
+    "k8s"
+  ]
 }
