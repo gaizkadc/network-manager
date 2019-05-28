@@ -45,4 +45,5 @@ func init() {
 	runCmd.Flags().StringVar(&config.ZTUrl, "zturl", "http://localhost:9993", "ZT Controller URL")
 	runCmd.Flags().StringVar(&config.ZTAccessToken, "ztaccesstoken", "", "ZT Access Token")
 	runCmd.Flags().StringVar(&config.DNSUrl, "dnsurl", "192.168.99.100:30500", "Consul DNS URL")
+	runCmd.Flags().StringVar(&config.QueueAddress, "queueAddress", "localhost:6650", "Message queue (localhost:6650)")
 }

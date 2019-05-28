@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-utils/pkg/tools"
+	"github.com/nalej/nalej-bus/pkg/bus/pulsar-comcast"
+	"github.com/nalej/nalej-bus/pkg/queue/network/ops"
 	"github.com/nalej/network-manager/internal/pkg/consul"
+	"github.com/nalej/network-manager/internal/pkg/queue"
 	"github.com/nalej/network-manager/internal/pkg/server/dns"
 	"github.com/nalej/network-manager/internal/pkg/server/networks"
 	"github.com/nalej/network-manager/internal/pkg/server/servicedns"
@@ -67,6 +70,22 @@ func (s *Server) Launch() {
 	// ServiceDNS
 	servDNSManager := servicedns.NewManager(consulClient)
 	servDNSHandler := servicedns.NewHandler(servDNSManager)
+
+	// Queue manager
+	log.Info().Str("queueURL", s.Configuration.QueueAddress).Msg("instantiate message queue")
+	pulsarclient := pulsar_comcast.NewClient(s.Configuration.QueueAddress)
+
+	log.Info().Msg("initialize networks ops manager...")
+	networkOpsConfig := ops.NewConfigNetworksOpsConsumer(1, ops.ConsumableStructsNetworkOpsConsumer{
+		AuthorizeMember: true, DisauthorizeMember: true})
+
+	networkOpsConsumer,err := ops.NewNetworkOpsConsumer(pulsarclient, "network-manager-network-ops", true, networkOpsConfig)
+	if err!=nil{
+		log.Panic().Err(err).Msg("impossible to initialize network ops manager")
+	}
+	networkOpsQueue := queue.NewNetworkOpsHandler(netManager, networkOpsConsumer)
+	networkOpsQueue.Run()
+	log.Info().Msg("initialize network ops manager done")
 
 	// gRPC Server
 	grpcServer := grpc.NewServer()

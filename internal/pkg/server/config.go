@@ -20,23 +20,28 @@ type Config struct {
 	ZTAccessToken string
 	// Consul DNS URL
 	DNSUrl string
+	// URL for the message queue
+	QueueAddress string
 }
 
 func (conf *Config) Validate() derrors.Error {
 	if conf.Port <= 0 {
-		return derrors.NewInvalidArgumentError("port must be specified")
+		return derrors.NewInvalidArgumentError("port must be defined")
 	}
 	if conf.SystemModelURL == "" {
-		return derrors.NewInvalidArgumentError("System Model URL be specified")
+		return derrors.NewInvalidArgumentError("System Model URL must be defined")
 	}
 	if conf.ZTUrl == "" {
-		return derrors.NewInvalidArgumentError("ZT URL must be specified")
+		return derrors.NewInvalidArgumentError("ZT URL must be defined")
 	}
 	if conf.ZTAccessToken == "" {
-		return derrors.NewInvalidArgumentError("ZT Access Token must be specified")
+		return derrors.NewInvalidArgumentError("ZT Access Token must be defined")
 	}
 	if conf.DNSUrl == "" {
-		return derrors.NewInvalidArgumentError("DNS URL be specified")
+		return derrors.NewInvalidArgumentError("DNS URL must be defined")
+	}
+	if conf.QueueAddress == "" {
+		return derrors.NewInvalidArgumentError("Queue URL must be defined")
 	}
 	return nil
 }
@@ -47,4 +52,5 @@ func (conf *Config) Print() {
 	log.Info().Str("zturl", conf.ZTUrl).Msg("ZT URL")
 	log.Info().Str("ztaccesstoken", conf.ZTAccessToken).Msg("ZT Access Token")
 	log.Info().Str("dnsurl", conf.DNSUrl).Msg("Consul DNS URL")
+	log.Info().Str("queueAddress", conf.QueueAddress).Msg("Queue address")
 }
