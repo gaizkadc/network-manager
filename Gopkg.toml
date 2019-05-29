@@ -12,11 +12,11 @@
 
 [[constraint]]
     name="github.com/nalej/grpc-network-go"
-    version="=v0.0.34"
+    version="=v0.0.35"
 
 [[constraint]]
   name="github.com/nalej/grpc-application-go"
-  version="=v0.0.77"
+  version="=v0.0.80"
 
 [[constraint]]
     name="github.com/nalej/derrors"
@@ -36,7 +36,7 @@
 
 [[constraint]]
     name="github.com/hashicorp/consul"
-    version="v1.3.0"
+    version="v1.5.1"
 
 [[override]]
   source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
