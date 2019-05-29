@@ -225,3 +225,37 @@ func (m *Manager) AuthorizeMember(authorizeMemberRequest *grpc_network_go.Author
 
 	return nil
 }
+
+// Unauthorize member to join a network
+func (m *Manager) UnauthorizeMember(unauthorizeMemberRequest *grpc_network_go.DisauthorizeMemberRequest) derrors.Error {
+	// Check if there is already a member
+	ctx, cancel := context.WithTimeout(context.Background(), NetworkQueryTimeout)
+	defer cancel()
+
+	ztNetwork, err := m.ApplicationClient.GetAppZtNetwork(ctx,&grpc_application_go.GetAppZtNetworkRequest{
+		OrganizationId: unauthorizeMemberRequest.OrganizationId,
+		AppInstanceId:unauthorizeMemberRequest.AppInstanceId})
+
+	if err != nil {
+		return derrors.NewNotFoundError("impossible to retrieve zt network member", err)
+	}
+
+	removeRequest := &grpc_application_go.RemoveAuthorizedZtNetworkMemberRequest{
+		AppInstanceId: unauthorizeMemberRequest.AppInstanceId,
+		OrganizationId: unauthorizeMemberRequest.OrganizationId,
+		ServiceGroupInstanceId: unauthorizeMemberRequest.ServiceGroupInstanceId,
+		ServiceApplicationInstanceId: unauthorizeMemberRequest.ServiceApplicationInstanceId,
+		//IsProxy:
+	}
+	_, err = m.ApplicationClient.RemoveAuthorizedZtNetworkMember(ctx,removeRequest)
+	if err != nil {
+		return derrors.NewNotFoundError("impossible to remove authorized zt network member", err)
+	}
+
+	err = m.ZTClient.Delete(ztNetwork.NetworkId, unauthorizeMemberRequest.OrganizationId)
+	if err != nil {
+		return derrors.NewNotFoundError("impossible to unauthorize member in zt network", err)
+	}
+
+	return nil
+}
