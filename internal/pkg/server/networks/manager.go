@@ -6,6 +6,7 @@ package networks
 
 import (
 	"context"
+	"fmt"
 	"github.com/nalej/derrors"
 	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-organization-go"
@@ -14,6 +15,12 @@ import (
 	"github.com/nalej/network-manager/internal/pkg/zt"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"time"
+)
+
+const (
+	// timeout for queries about network values
+	NetworkQueryTimeout = time.Second * 10
 )
 
 // Manager structure with the remote clients required to manage networks.
@@ -85,14 +92,8 @@ func (m *Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkReques
 
 // DeleteNetwork deletes a network from the system.
 func (m *Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNetworkRequest) derrors.Error {
-	// Check if organization exists
-	_, err := m.OrganizationClient.GetOrganization(context.Background(),
-		&grpc_organization_go.OrganizationId{OrganizationId: deleteNetworkRequest.OrganizationId})
-	if err != nil {
-		return derrors.NewNotFoundError("invalid organizationID", err)
-	}
 
-	// get the entry from the system model
+	// get the network id from the system model
 	ztNetwork, err := m.ApplicationClient.GetAppZtNetwork(context.Background(),
 		&grpc_application_go.GetAppZtNetworkRequest{
 			OrganizationId: deleteNetworkRequest.OrganizationId,
@@ -101,19 +102,32 @@ func (m *Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNetw
 		return derrors.NewInternalError("impossible to get network id to delete", err)
 	}
 
-	// delete from the system model
-	req := grpc_application_go.RemoveAppZtNetworkRequest{
+	// Delete all the members of the network
+
+	req := grpc_application_go.RemoveCompleteAppZtNetworkMemberNetRequest{
 		OrganizationId: deleteNetworkRequest.OrganizationId,
-		AppInstanceId: deleteNetworkRequest.AppInstanceId}
-	_, err = m.ApplicationClient.RemoveAppZtNetwork(context.Background(), &req)
-	if err != nil {
-		log.Error().Err(err).Msg("impossible to delete zt network from system model")
+		AppInstanceId: deleteNetworkRequest.AppInstanceId,
+		NetworkId: ztNetwork.NetworkId,
 	}
+	_, err = m.ApplicationClient.RemoveCompleteAppZtNetworkMemberNet(context.Background(), &req)
+	if err != nil {
+		log.Error().Err(err).Msg("impossible to delete zt network members from system model")
+	}
+
 
 	// Use zt client to delete network
 	err = m.ZTClient.Delete(ztNetwork.NetworkId, deleteNetworkRequest.OrganizationId)
 	if err != nil {
 		return derrors.NewGenericError("Cannot delete ZeroTier network", err)
+	}
+
+	// Delete the network entry
+	_, err = m.ApplicationClient.RemoveAppZtNetwork(context.Background(), &grpc_application_go.RemoveAppZtNetworkRequest{
+		OrganizationId: deleteNetworkRequest.OrganizationId,
+		AppInstanceId: deleteNetworkRequest.AppInstanceId,
+	})
+	if err != nil {
+		return derrors.NewGenericError("cannot delete zt network entry from the system model")
 	}
 
 	return nil
@@ -168,16 +182,79 @@ func (m *Manager) ListNetworks(organizationId *grpc_organization_go.Organization
 
 // Authorize a member to join a network
 func (m *Manager) AuthorizeMember(authorizeMemberRequest *grpc_network_go.AuthorizeMemberRequest) derrors.Error {
-	// Check if organization exists
-	_, err := m.OrganizationClient.GetOrganization(context.Background(),
-		&grpc_organization_go.OrganizationId{OrganizationId: authorizeMemberRequest.OrganizationId})
+	// Check if there is a network already defined with this id
+	ctx, cancel := context.WithTimeout(context.Background(), NetworkQueryTimeout)
+	defer cancel()
+
+	net, err := m.ApplicationClient.GetAppZtNetwork(ctx,&grpc_application_go.GetAppZtNetworkRequest{
+		OrganizationId: authorizeMemberRequest.OrganizationId,
+		AppInstanceId: authorizeMemberRequest.AppInstanceId,
+		})
 	if err != nil {
-		return derrors.NewNotFoundError("invalid organizationID", err)
+		log.Error().Err(err).Msg("impossible to find the requested network")
+		return derrors.NewNotFoundError("impossible to find the requested network", err)
+	}
+	if net.NetworkId != authorizeMemberRequest.NetworkId {
+		return derrors.NewFailedPreconditionError(fmt.Sprintf("application network %s does not match %s",
+			net.NetworkId, authorizeMemberRequest.NetworkId))
 	}
 
 	err = m.ZTClient.Authorize(authorizeMemberRequest.NetworkId, authorizeMemberRequest.MemberId)
 	if err != nil {
 		return derrors.NewNotFoundError("Unable to authorize member", err)
+	}
+
+	// We can assume the client was successfully authorized
+	authRequest := grpc_application_go.AddAuthorizedZtNetworkMemberRequest{
+		AppInstanceId: authorizeMemberRequest.AppInstanceId,
+		OrganizationId: authorizeMemberRequest.OrganizationId,
+		ServiceApplicationInstanceId: authorizeMemberRequest.ServiceApplicationInstanceId,
+		ServiceGroupInstanceId: authorizeMemberRequest.ServiceGroupInstanceId,
+		NetworkId: authorizeMemberRequest.NetworkId,
+		MemberId: authorizeMemberRequest.MemberId,
+		IsProxy: authorizeMemberRequest.IsProxy,
+	}
+
+	ctx2, cancel2 := context.WithTimeout(context.Background(), NetworkQueryTimeout)
+	defer cancel2()
+	_, err = m.ApplicationClient.AddAuthorizedZtNetworkMember(ctx2,&authRequest)
+	if err != nil {
+		return derrors.NewNotFoundError("impossible to add authorized zt network entry", err)
+	}
+
+
+	return nil
+}
+
+// Unauthorize member to join a network
+func (m *Manager) UnauthorizeMember(unauthorizeMemberRequest *grpc_network_go.DisauthorizeMemberRequest) derrors.Error {
+	// Check if there is already a member
+	ctx, cancel := context.WithTimeout(context.Background(), NetworkQueryTimeout)
+	defer cancel()
+
+	ztNetwork, err := m.ApplicationClient.GetAppZtNetwork(ctx,&grpc_application_go.GetAppZtNetworkRequest{
+		OrganizationId: unauthorizeMemberRequest.OrganizationId,
+		AppInstanceId:unauthorizeMemberRequest.AppInstanceId})
+
+	if err != nil {
+		return derrors.NewNotFoundError("impossible to retrieve zt network member", err)
+	}
+
+	removeRequest := &grpc_application_go.RemoveAuthorizedZtNetworkMemberRequest{
+		AppInstanceId: unauthorizeMemberRequest.AppInstanceId,
+		OrganizationId: unauthorizeMemberRequest.OrganizationId,
+		ServiceGroupInstanceId: unauthorizeMemberRequest.ServiceGroupInstanceId,
+		ServiceApplicationInstanceId: unauthorizeMemberRequest.ServiceApplicationInstanceId,
+		//IsProxy:
+	}
+	_, err = m.ApplicationClient.RemoveAuthorizedZtNetworkMember(ctx,removeRequest)
+	if err != nil {
+		return derrors.NewNotFoundError("impossible to remove authorized zt network member", err)
+	}
+
+	err = m.ZTClient.Delete(ztNetwork.NetworkId, unauthorizeMemberRequest.OrganizationId)
+	if err != nil {
+		return derrors.NewNotFoundError("impossible to unauthorize member in zt network", err)
 	}
 
 	return nil

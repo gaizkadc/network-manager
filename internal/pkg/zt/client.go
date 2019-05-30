@@ -224,3 +224,33 @@ func (ztc *ZTClient) Authorize(networkId string, memberId string) derrors.Error 
 
 	return nil
 }
+
+
+// Unauthorize a member to join a network
+//	params:
+//		Network ID
+//		Member ID
+//	returns:
+//		Error, if there's one
+func (ztc *ZTClient) Unauthorize(networkId string, memberId string) derrors.Error {
+	// Create new unauthorized member
+	member := &ZTMember{
+		ID:         memberId,
+		Nwid:       networkId,
+		Authorized: False(),
+	}
+
+	// Form path of the request
+	path := fmt.Sprintf(networkAuthMemberPath, networkId, memberId)
+
+	// Create empty member
+	output := &ZTMember{}
+
+	// Send request to the controller
+	request := ztc.client.Post(path, member, output)
+	if request.Error != nil {
+		return derrors.NewNotFoundError("Error unauthorizing member", request.Error).WithParams(networkId, memberId)
+	}
+
+	return nil
+}
