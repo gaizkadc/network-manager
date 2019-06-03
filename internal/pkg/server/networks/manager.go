@@ -102,19 +102,6 @@ func (m *Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNetw
 		return derrors.NewInternalError("impossible to get network id to delete", err)
 	}
 
-	// Delete all the members of the network
-
-	req := grpc_application_go.RemoveCompleteAppZtNetworkMemberNetRequest{
-		OrganizationId: deleteNetworkRequest.OrganizationId,
-		AppInstanceId: deleteNetworkRequest.AppInstanceId,
-		NetworkId: ztNetwork.NetworkId,
-	}
-	_, err = m.ApplicationClient.RemoveCompleteAppZtNetworkMemberNet(context.Background(), &req)
-	if err != nil {
-		log.Error().Err(err).Msg("impossible to delete zt network members from system model")
-	}
-
-
 	// Use zt client to delete network
 	err = m.ZTClient.Delete(ztNetwork.NetworkId, deleteNetworkRequest.OrganizationId)
 	if err != nil {

@@ -12,11 +12,11 @@
 
 [[constraint]]
     name="github.com/nalej/grpc-network-go"
-    version="=v0.0.35"
+    version="=v0.0.36"
 
 [[constraint]]
   name="github.com/nalej/grpc-application-go"
-  version="=v0.0.80"
+  version="=v0.0.81"
 
 [[constraint]]
     name="github.com/nalej/derrors"

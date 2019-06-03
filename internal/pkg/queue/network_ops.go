@@ -73,7 +73,9 @@ func(n NetworkOpsHandler) conumeDisauthorizeMemberRequest () {
     for {
         received := <- n.consumer.Config.ChDisauthorizeMembersRequest
         log.Debug().Interface("disauthorizeMemberRequest",received).Msg("<- incoming disauthorize member request")
-        // TODO implementation pending
-        log.Error().Msg("disauthorize member operation has not been implemented yet")
+        err := n.netManager.UnauthorizeMember(received)
+        if err != nil {
+            log.Error().Err(err).Msg("failed processing unauthorize member request")
+        }
     }
 }
