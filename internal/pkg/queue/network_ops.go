@@ -32,7 +32,7 @@ func NewNetworkOpsHandler(netManager *networks.Manager, consumer *ops.NetworkOps
 
 func(n NetworkOpsHandler) Run() {
     go n.consumeAuthorizeMemberRequest()
-    go n.conumeDisauthorizeMemberRequest()
+    go n.consumeDisauthorizeMemberRequest()
     go n.waitRequests()
 }
 
@@ -68,7 +68,7 @@ func(n NetworkOpsHandler) consumeAuthorizeMemberRequest () {
     }
 }
 
-func(n NetworkOpsHandler) conumeDisauthorizeMemberRequest () {
+func(n NetworkOpsHandler) consumeDisauthorizeMemberRequest() {
     log.Debug().Msg("waiting for disauthorize member requests...")
     for {
         received := <- n.consumer.Config.ChDisauthorizeMembersRequest

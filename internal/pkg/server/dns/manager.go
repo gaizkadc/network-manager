@@ -25,6 +25,8 @@ func NewManager(consulClient *consul.ConsulClient) (*Manager, derrors.Error) {
 
 // AddDNSEntry
 func (m *Manager) AddDNSEntry(entry *grpc_network_go.AddDNSEntryRequest) derrors.Error {
+	log.Debug().Str("appInstanceId",entry.AppInstanceId).Str("FQDN",entry.Fqdn).Str("ip",entry.Ip).
+		Msg("added DNS entry")
 	err := m.client.Add(entry.OrganizationId, entry.AppInstanceId, entry.Fqdn, entry.Ip)
 
 	if err != nil {
