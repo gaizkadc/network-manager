@@ -8,9 +8,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/nalej/derrors"
+	"github.com/nalej/grpc-application-go"
 	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-organization-go"
-	"github.com/nalej/grpc-application-go"
 	"github.com/nalej/network-manager/internal/pkg/entities"
 	"github.com/nalej/network-manager/internal/pkg/zt"
 	"github.com/rs/zerolog/log"
@@ -219,29 +219,48 @@ func (m *Manager) UnauthorizeMember(unauthorizeMemberRequest *grpc_network_go.Di
 	ctx, cancel := context.WithTimeout(context.Background(), NetworkQueryTimeout)
 	defer cancel()
 
-	ztNetwork, err := m.ApplicationClient.GetAppZtNetwork(ctx,&grpc_application_go.GetAppZtNetworkRequest{
+	member, err := m.ApplicationClient.GetAuthorizedZtNetworkMember(ctx, &grpc_application_go.GetAuthorizedZtNetworkMemberRequest{
 		OrganizationId: unauthorizeMemberRequest.OrganizationId,
-		AppInstanceId:unauthorizeMemberRequest.AppInstanceId})
+		ServiceGroupInstanceId: unauthorizeMemberRequest.ServiceGroupInstanceId,
+		ServiceApplicationInstanceId: unauthorizeMemberRequest.ServiceApplicationInstanceId,
+		AppInstanceId: unauthorizeMemberRequest.AppInstanceId,
+	})
 
 	if err != nil {
 		return derrors.NewNotFoundError("impossible to retrieve zt network member", err)
 	}
 
-	removeRequest := &grpc_application_go.RemoveAuthorizedZtNetworkMemberRequest{
-		AppInstanceId: unauthorizeMemberRequest.AppInstanceId,
-		OrganizationId: unauthorizeMemberRequest.OrganizationId,
-		ServiceGroupInstanceId: unauthorizeMemberRequest.ServiceGroupInstanceId,
-		ServiceApplicationInstanceId: unauthorizeMemberRequest.ServiceApplicationInstanceId,
-		//IsProxy:
-	}
-	_, err = m.ApplicationClient.RemoveAuthorizedZtNetworkMember(ctx,removeRequest)
-	if err != nil {
-		return derrors.NewNotFoundError("impossible to remove authorized zt network member", err)
+	log.Debug().Interface("members",member).Msg("members to unauthorize")
+
+	// remove this members
+	for _, serviceMember := range member.Members {
+		removeRequest := &grpc_application_go.RemoveAuthorizedZtNetworkMemberRequest{
+			AppInstanceId: serviceMember.AppInstanceId,
+			OrganizationId: serviceMember.OrganizationId,
+			ServiceGroupInstanceId: serviceMember.ServiceGroupInstanceId,
+			ServiceApplicationInstanceId: serviceMember.ServiceApplicationInstanceId,
+			ZtNetworkId: serviceMember.NetworkId,
+		}
+		log.Debug().Interface("removeAuthorizedZtNetworkMember", removeRequest).Msg("remove authorized network")
+
+		ctx, cancel := context.WithTimeout(context.Background(), NetworkQueryTimeout)
+		_, err = m.ApplicationClient.RemoveAuthorizedZtNetworkMember(ctx,removeRequest)
+		cancel()
+		if err != nil {
+			return derrors.NewNotFoundError("impossible to remove authorized zt network member", err)
+		}
 	}
 
-	err = m.ZTClient.Delete(ztNetwork.NetworkId, unauthorizeMemberRequest.OrganizationId)
-	if err != nil {
-		return derrors.NewNotFoundError("impossible to unauthorize member in zt network", err)
+
+	// Unauthorize from zt network
+	// retrieve me
+	for _, serviceMember := range member.Members {
+		log.Debug().Str("networkId", serviceMember.NetworkId).Str("memberId",serviceMember.MemberId).
+			Msg("unauthorize access to ZT member")
+		err = m.ZTClient.Unauthorize(serviceMember.NetworkId, serviceMember.MemberId)
+		if err != nil {
+			return derrors.NewNotFoundError("impossible to unauthorize member in zt network", err)
+		}
 	}
 
 	return nil
