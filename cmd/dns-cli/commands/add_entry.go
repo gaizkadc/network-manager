@@ -18,17 +18,14 @@ var addEntryServer string
 // Organization ID
 var addEntryOrganizationId string
 
-// Network ID
-var addEntryNetworkId string
-
 // FQDN
 var addEntryFqdn string
 
 // IP
 var addEntryIp string
 
-// Application Instance Id
-var addEntryAppInstanceId string
+// Service name
+var addEntryServiceName string
 
 var addEntryCmd = &cobra.Command{
 	Use:   "add",
@@ -44,15 +41,13 @@ func init() {
 	rootCmd.AddCommand(addEntryCmd)
 	addEntryCmd.Flags().StringVar(&addEntryServer, "server", "localhost:8000", "Networking manager server URL")
 	addEntryCmd.Flags().StringVar(&addEntryOrganizationId, "orgId", "", "Organization ID")
-	addEntryCmd.Flags().StringVar(&addEntryNetworkId, "netId", "", "ID of the network in which the DNS entry will be added")
 	addEntryCmd.Flags().StringVar(&addEntryFqdn, "fqdn", "", "FQDN of the DNS entry")
 	addEntryCmd.Flags().StringVar(&addEntryIp, "ip", "", "IP of the DNS entry")
-	addEntryCmd.Flags().StringVar(&addEntryAppInstanceId, "appId", "", "Application instance id")
+	addEntryCmd.Flags().StringVar(&addEntryServiceName, "serviceName", "", "service name")
 	addEntryCmd.MarkFlagRequired("orgId")
-	addEntryCmd.MarkFlagRequired("netId")
 	addEntryCmd.MarkFlagRequired("fqdn")
 	addEntryCmd.MarkFlagRequired("ip")
-	addEntryCmd.MarkFlagRequired("appId")
+	addEntryCmd.MarkFlagRequired("serviceName")
 }
 
 func addEntry() {
@@ -67,15 +62,14 @@ func addEntry() {
 
 	request := grpc_network_go.AddDNSEntryRequest{
 		OrganizationId: addEntryOrganizationId,
-		NetworkId:      addEntryNetworkId,
+		ServiceName:    addEntryServiceName,
 		Fqdn:           addEntryFqdn,
 		Ip:             addEntryIp,
-		AppInstanceId:  addEntryAppInstanceId,
 	}
 
 	_, err = client.AddDNSEntry(context.Background(), &request)
 	if err != nil {
-		log.Error().Err(err).Msgf("error adding dns register %s", addEntryNetworkId)
+		log.Error().Err(err).Msgf("error adding dns register %s", addEntryServiceName)
 		return
 	}
 

@@ -14,16 +14,17 @@ type DNSEntry struct {
 	NetworkId      string
 	Fqdn           string
 	Ip             string
-	AppInstanceId  string
+	ServiceName    string
+	Tags		   []string
 }
 
 func DNSEntryFromGRPC(entry *grpc_network_go.AddDNSEntryRequest) DNSEntry {
 	return DNSEntry{
 		OrganizationId: entry.OrganizationId,
-		NetworkId:      entry.NetworkId,
 		Fqdn:           entry.Fqdn,
 		Ip:             entry.Ip,
-		AppInstanceId:  entry.AppInstanceId,
+		ServiceName:	entry.ServiceName,
+		Tags:			entry.Tags,
 	}
 }
 
@@ -33,6 +34,7 @@ func (e *DNSEntry) ToGRPC() *grpc_network_go.DNSEntry {
 		NetworkId:      e.NetworkId,
 		Fqdn:           e.Fqdn,
 		Ip:             e.Ip,
+		Tags:			e.Tags,
 	}
 }
 
@@ -41,21 +43,17 @@ func (e *DNSEntry) ToConsulAPI() *api.AgentServiceRegistration {
 		Kind:    api.ServiceKind(e.OrganizationId),
 		Name:    e.Fqdn,
 		Address: e.Ip,
-		Tags: []string{e.OrganizationId, e.AppInstanceId},
+		Tags: e.Tags,
+
 	}
 }
 
 func AddDNSRequestToEntry(e *grpc_network_go.AddDNSEntryRequest) *grpc_network_go.DNSEntry {
 	return &grpc_network_go.DNSEntry{
+		Fqdn: e.Fqdn,
+		Tags: e.Tags,
 		OrganizationId: e.OrganizationId,
-		NetworkId:      e.NetworkId,
-		Fqdn:           e.Fqdn,
-		Ip:             e.Ip,
-	}
-}
-
-func DeleteDNSRequestToEntry(e *grpc_network_go.DeleteDNSEntryRequest) *grpc_network_go.DNSEntry {
-	return &grpc_network_go.DNSEntry{
-		OrganizationId: e.OrganizationId,
+		Ip: e.Ip,
+		//NetworkId:
 	}
 }

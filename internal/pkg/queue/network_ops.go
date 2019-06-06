@@ -7,6 +7,7 @@ package queue
 import (
     "context"
     "github.com/nalej/nalej-bus/pkg/queue/network/ops"
+    "github.com/nalej/network-manager/internal/pkg/server/dns"
     "github.com/nalej/network-manager/internal/pkg/server/networks"
     "github.com/rs/zerolog/log"
     "time"
@@ -18,6 +19,8 @@ const NetworkOpsTimeout = time.Minute * 60
 type NetworkOpsHandler struct {
     // reference manager for networks
     netManager *networks.Manager
+    // dns manager
+    dnsManager *dns.Manager
     // operations consumer
     consumer *ops.NetworkOpsConsumer
 }
@@ -26,13 +29,15 @@ type NetworkOpsHandler struct {
 // params:
 //  netManager
 //  cons
-func NewNetworkOpsHandler(netManager *networks.Manager, consumer *ops.NetworkOpsConsumer) NetworkOpsHandler {
-    return NetworkOpsHandler{netManager: netManager, consumer: consumer}
+func NewNetworkOpsHandler(netManager *networks.Manager, dnsManager *dns.Manager, consumer *ops.NetworkOpsConsumer) NetworkOpsHandler {
+    return NetworkOpsHandler{netManager: netManager, dnsManager: dnsManager, consumer: consumer}
 }
 
 func(n NetworkOpsHandler) Run() {
     go n.consumeAuthorizeMemberRequest()
     go n.consumeDisauthorizeMemberRequest()
+    go n.consumeAddDNSEntryRequest()
+    go n.consumeDeleteDNSEntryRequest()
     go n.waitRequests()
 }
 
@@ -76,6 +81,30 @@ func(n NetworkOpsHandler) consumeDisauthorizeMemberRequest() {
         err := n.netManager.UnauthorizeMember(received)
         if err != nil {
             log.Error().Err(err).Msg("failed processing unauthorize member request")
+        }
+    }
+}
+
+func(n NetworkOpsHandler) consumeAddDNSEntryRequest() {
+    log.Debug().Msg("waiting for consume add dns entry request...")
+    for {
+        received := <- n.consumer.Config.ChAddDNSEntryRequest
+        log.Debug().Interface("addDNSEntryRequest", received).Msg("<- incoming add dns entry request")
+        err := n.dnsManager.AddDNSEntry(received)
+        if err != nil {
+            log.Error().Err(err).Msg("failed processing add dns entry request")
+        }
+    }
+}
+
+func(n NetworkOpsHandler) consumeDeleteDNSEntryRequest() {
+    log.Debug().Msg("waiting for consume delete dns entry request...")
+    for {
+        received := <- n.consumer.Config.ChDeleteDNSEntryRequest
+        log.Debug().Interface("deleteDNSEntryRequest", received).Msg("<- incoming delete dns entry request")
+        err := n.dnsManager.DeleteDNSEntry(received)
+        if err != nil {
+            log.Error().Err(err).Msg("failed processing delete dns entry request")
         }
     }
 }
