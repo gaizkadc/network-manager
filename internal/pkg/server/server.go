@@ -77,13 +77,13 @@ func (s *Server) Launch() {
 
 	log.Info().Msg("initialize networks ops manager...")
 	networkOpsConfig := ops.NewConfigNetworksOpsConsumer(1, ops.ConsumableStructsNetworkOpsConsumer{
-		AuthorizeMember: true, DisauthorizeMember: true})
+		AuthorizeMember: true, DisauthorizeMember: true, AddDNSEntry: true, DeleteDNSEntry: true})
 
 	networkOpsConsumer,err := ops.NewNetworkOpsConsumer(pulsarclient, "network-manager-network-ops", true, networkOpsConfig)
 	if err!=nil{
 		log.Panic().Err(err).Msg("impossible to initialize network ops manager")
 	}
-	networkOpsQueue := queue.NewNetworkOpsHandler(netManager, networkOpsConsumer)
+	networkOpsQueue := queue.NewNetworkOpsHandler(netManager, dnsManager, networkOpsConsumer)
 	networkOpsQueue.Run()
 	log.Info().Msg("initialize network ops manager done")
 

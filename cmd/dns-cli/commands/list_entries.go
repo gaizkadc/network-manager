@@ -52,7 +52,7 @@ func listEntries() {
 
 	listEntries, err := client.ListEntries(context.Background(), &request)
 	if err != nil {
-		log.Error().Err(err).Msgf("error adding dns register %s", addEntryNetworkId)
+		log.Error().Err(err).Msgf("error listing dns register %s", listEntriesOrganizationId)
 		return
 	}
 

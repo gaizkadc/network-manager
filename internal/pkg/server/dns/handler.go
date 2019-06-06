@@ -24,10 +24,7 @@ func NewHandler(manager Manager) *Handler {
 }
 
 func (h *Handler) AddDNSEntry(ctx context.Context, entry *grpc_network_go.AddDNSEntryRequest) (*grpc_common_go.Success, error) {
-	log.Debug().Str("organizationId", entry.OrganizationId).
-		Str("networkId", entry.NetworkId).
-		Str("fqdn", entry.Fqdn).
-		Str("ip", entry.Ip).Msg("add dns entry")
+	log.Debug().Interface("request", entry).Msg("add dns entry")
 
 	aux := entities.AddDNSRequestToEntry(entry)
 	err := entities.ValidFQDN(aux)
@@ -45,8 +42,7 @@ func (h *Handler) AddDNSEntry(ctx context.Context, entry *grpc_network_go.AddDNS
 }
 
 func (h *Handler) DeleteDNSEntry(ctx context.Context, entry *grpc_network_go.DeleteDNSEntryRequest) (*grpc_common_go.Success, error) {
-	log.Debug().Str("organizationId", entry.OrganizationId).
-		Str("appId", entry.AppInstanceId).Msg("delete dns entry")
+	log.Debug().Interface("request",entry).Msg("delete dns entry")
 
 	err := h.Manager.DeleteDNSEntry(entry)
 	if err != nil {
@@ -57,7 +53,7 @@ func (h *Handler) DeleteDNSEntry(ctx context.Context, entry *grpc_network_go.Del
 }
 
 func (h *Handler) ListEntries(ctx context.Context, organizationID *grpc_organization_go.OrganizationId) (*grpc_network_go.DNSEntryList, error) {
-	log.Debug().Str("organizationId", organizationID.OrganizationId).Msg("list dns entries")
+	log.Debug().Interface("request",organizationID).Msg("list dns entries")
 
 	err := entities.ValidOrganizationId(organizationID)
 	if err != nil {

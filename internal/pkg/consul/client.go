@@ -32,14 +32,12 @@ func NewConsulClient(address string) (*ConsulClient, derrors.Error) {
 	return &ConsulClient{client: *client}, nil
 }
 
-func (a *ConsulClient) Add(organizationId string, appInstanceId string, fqdn string, ip string) derrors.Error {
-
+func (a *ConsulClient) Add(serviceName string, fqdn string, ip string, tags []string) derrors.Error {
 	entry := &api.AgentServiceRegistration{
-		//Kind:    api.ServiceKind(appInstanceId),
 		Name:    fqdn,
 		Address: ip,
-		Tags: []string{organizationId, appInstanceId},
-		//ID: fmt.Sprintf("%s-%s",appInstanceId,organizationId),
+		Tags: tags,
+		ID: fqdn,
 	}
 
 	err := a.client.Agent().ServiceRegister(entry)
@@ -52,7 +50,37 @@ func (a *ConsulClient) Add(organizationId string, appInstanceId string, fqdn str
 	return nil
 }
 
-func (a *ConsulClient) Delete(organizationId string, appInstanceId string) derrors.Error {
+
+
+// The delete operation uses the fqdn as the consul service id and removes
+// the entry with that id. If tags are indicated, all the service entries
+// with those tags are removed.
+// params:
+//  fqdn used as service id
+//  tags identifying the service entry
+// return:
+//  error if any
+func (a *ConsulClient) Delete(fqdn string, tags []string) derrors.Error {
+	if tags == nil || len(tags) == 0 {
+		// remove using the FQDN
+		return a.deleteEntryById(fqdn)
+	}
+
+	// delete entries using tags
+	return a.deleteEntryByTags(tags)
+}
+
+func (a *ConsulClient) deleteEntryById(id string) derrors.Error {
+	err := a.client.Agent().ServiceDeregister(id)
+	if err != nil {
+		log.Error().Err(err).Msgf("impossible to delete DNS entry for service %s", id)
+		return derrors.NewInternalError(fmt.Sprintf("impossible to delete DNS entry for service %s", id), err)
+	}
+	return nil
+}
+
+
+func (a *ConsulClient) deleteEntryByTags(tags []string) derrors.Error {
 
 	// The current consul API does not filter services by tag
 	// https://github.com/hashicorp/consul/issues/4811
@@ -67,21 +95,26 @@ func (a *ConsulClient) Delete(organizationId string, appInstanceId string) derro
 		return derrors.NewGenericError("impossible to build DNS query", err)
 	}
 
+
 	toDelete := make([]string,0)
-	for serviceId, tags := range services {
-		// check if organizationId and appInstanceId are in the tags
-		foundOrg := false
-		foundApp := false
-		for _, t := range tags {
-			if t == organizationId {
-				foundOrg = true
-			}
-			if t == appInstanceId {
-				foundApp = true
+	for serviceId, serviceTags := range services {
+		if serviceTags == nil || len(serviceTags) == 0 {
+			continue
+		}
+		// build a map to determine if the tags are available
+		available := make(map[string] bool, len(serviceTags))
+		for _, availableTag := range serviceTags {
+			available[availableTag] = true
+		}
+		var allTagsFound bool = true
+		for _, toFind := range serviceTags {
+			if _, found := available[toFind]; !found {
+				allTagsFound = false
+				break
 			}
 		}
-		// if found, this entry has to be deleted
-		if foundOrg && foundApp {
+
+		if allTagsFound {
 			toDelete = append(toDelete, serviceId)
 		}
 	}
@@ -111,6 +144,7 @@ func (a *ConsulClient) Delete(organizationId string, appInstanceId string) derro
 
 	return nil
 }
+
 
 func (a *ConsulClient) List(serviceKind string) ([]Service, derrors.Error) {
 	services, err := a.client.Agent().Services()
