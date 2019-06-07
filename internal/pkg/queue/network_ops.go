@@ -45,14 +45,18 @@ func(n NetworkOpsHandler) Run() {
 func (n NetworkOpsHandler) waitRequests() {
     log.Debug().Msg("wait for requests to be received by the network ops queue")
     for {
+        somethingReceived := false
         ctx, cancel := context.WithTimeout(context.Background(), NetworkOpsTimeout)
         currentTime := time.Now()
         err := n.consumer.Consume(ctx)
+        somethingReceived = true
         cancel()
         select {
         case <- ctx.Done():
             // the timeout was reached
-            log.Debug().Msgf("no message received since %s",currentTime.Format(time.RFC3339))
+            if !somethingReceived {
+                log.Debug().Msgf("no message received since %s",currentTime.Format(time.RFC3339))
+            }
         default:
             if err != nil {
                 log.Error().Err(err).Msg("error consuming data from network ops")
