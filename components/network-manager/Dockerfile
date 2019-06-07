@@ -2,9 +2,6 @@
 # Copyright (C) 2018 Nalej Group - All Rights Reserved
 #
 
-# iron/go is the alpine image with only ca-certificates added
-#FROM zerotier/zerotier-containerized:1.2.4 as zt_container
-
 FROM debian:stretch
 
 RUN apt-get update \

@@ -28,7 +28,6 @@ type ZTClient struct {
 }
 
 func NewZTClient(url string, accessToken string) (*ZTClient, derrors.Error) {
-	log.Debug().Msgf("connecting to %s", url)
 
 	conf, err := dhttp.NewRestURLConfig(url)
 

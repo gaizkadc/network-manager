@@ -5,10 +5,10 @@
 package consul
 
 import (
+	"fmt"
 	"github.com/hashicorp/consul/api"
 	"github.com/nalej/derrors"
 	"github.com/rs/zerolog/log"
-	"fmt"
 )
 
 const (
@@ -37,7 +37,7 @@ func (a *ConsulClient) Add(serviceName string, fqdn string, ip string, tags []st
 		Name:    fqdn,
 		Address: ip,
 		Tags: tags,
-		ID: fqdn,
+		ID: fmt.Sprintf("%s-%s",fqdn,ip),
 	}
 
 	err := a.client.Agent().ServiceRegister(entry)
@@ -106,11 +106,12 @@ func (a *ConsulClient) deleteEntryByTags(tags []string) derrors.Error {
 		for _, availableTag := range serviceTags {
 			available[availableTag] = true
 		}
+
+
 		var allTagsFound bool = true
-		for _, toFind := range serviceTags {
+		for _, toFind := range tags {
 			if _, found := available[toFind]; !found {
 				allTagsFound = false
-				break
 			}
 		}
 
