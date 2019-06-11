@@ -72,17 +72,13 @@ func (a *ConsulClient) Delete(fqdn string, tags []string) derrors.Error {
 }
 
 func (a *ConsulClient) deleteEntryById(id string) derrors.Error {
-	log.Debug().Str("id", id).Msg("delete entry using id")
 
-
-	// Get all the service information to deregister
+	// Get all the service information about the service to deregister
 	serv, _, err := a.client.Catalog().Service(id, "", &api.QueryOptions{Datacenter:"dc1"})
 	if err != nil {
 		log.Error().Err(err).Str("serviceId",id).Msg("service not found")
 		return derrors.NewInternalError("service not found", err)
 	}
-
-	log.Debug().Msgf("the operation returned %d",len(serv))
 
 	// there should ony be one entry, but we remove all just for the sake of completeness
 	for _, s := range serv {
@@ -103,7 +99,6 @@ func (a *ConsulClient) deleteEntryById(id string) derrors.Error {
 
 
 func (a *ConsulClient) deleteEntryByTags(tags []string) derrors.Error {
-	log.Debug().Interface("tags",tags).Msg("delete entry using tags")
 
 	// The current consul API does not filter services by tag
 	// https://github.com/hashicorp/consul/issues/4811
