@@ -34,17 +34,24 @@ func NewConsulClient(address string) (*ConsulClient, derrors.Error) {
 
 func (a *ConsulClient) Add(serviceName string, fqdn string, ip string, tags []string) derrors.Error {
 
-
-	entry := &api.AgentServiceRegistration{
-		Name:    fqdn,
+	// Register an external agent so we do not need a local agent running to control that service
+	entry := &api.CatalogRegistration{
+		Node: "dns-server-consul-server-0",
+		Datacenter:"dc1",
 		Address: ip,
-		Tags: tags,
-		ID: fqdn,
+		Service: &api.AgentService{
+			Service: fqdn,
+			ID: fqdn,
+			Address: ip,
+			Tags: tags,
+		},
+		NodeMeta: map[string]string{
+			"external-node": "true",
+		},
 	}
-	err := a.client.Agent().ServiceRegister(entry)
-
+	_, err := a.client.Catalog().Register(entry, &api.WriteOptions{Datacenter:"dc1"})
 	if err != nil {
-		log.Error().Msg("Could not register service")
+		log.Error().Msg("impossible to register service in catalog")
 		return derrors.NewGenericError(err.Error())
 	}
 
@@ -92,7 +99,6 @@ func (a *ConsulClient) deleteEntryById(id string) derrors.Error {
 			log.Error().Err(err).Interface("request", dereq).Msg("impossible to remove entry from catalog")
 		}
 	}
-
 
 	return nil
 }
