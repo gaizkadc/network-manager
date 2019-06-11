@@ -33,13 +33,14 @@ func NewConsulClient(address string) (*ConsulClient, derrors.Error) {
 }
 
 func (a *ConsulClient) Add(serviceName string, fqdn string, ip string, tags []string) derrors.Error {
+
+
 	entry := &api.AgentServiceRegistration{
 		Name:    fqdn,
 		Address: ip,
 		Tags: tags,
-		ID: fmt.Sprintf("%s-%s",fqdn,ip),
+		ID: fqdn,
 	}
-
 	err := a.client.Agent().ServiceRegister(entry)
 
 	if err != nil {
@@ -71,16 +72,38 @@ func (a *ConsulClient) Delete(fqdn string, tags []string) derrors.Error {
 }
 
 func (a *ConsulClient) deleteEntryById(id string) derrors.Error {
-	err := a.client.Agent().ServiceDeregister(id)
+	log.Debug().Str("id", id).Msg("delete entry using id")
+
+
+	// Get all the service information to deregister
+	serv, _, err := a.client.Catalog().Service(id, "", &api.QueryOptions{Datacenter:"dc1"})
 	if err != nil {
-		log.Error().Err(err).Msgf("impossible to delete DNS entry for service %s", id)
-		return derrors.NewInternalError(fmt.Sprintf("impossible to delete DNS entry for service %s", id), err)
+		log.Error().Err(err).Str("serviceId",id).Msg("service not found")
+		return derrors.NewInternalError("service not found", err)
 	}
+
+	log.Debug().Msgf("the operation returned %d",len(serv))
+
+	// there should ony be one entry, but we remove all just for the sake of completeness
+	for _, s := range serv {
+		dereq := api.CatalogDeregistration{
+			ServiceID: s.ServiceID,
+			Datacenter: s.Datacenter,
+			Address:s.Address,
+			Node: s.Node}
+		_, err = a.client.Catalog().Deregister(&dereq,&api.WriteOptions{Datacenter:"dc1"})
+		if err != nil {
+			log.Error().Err(err).Interface("request", dereq).Msg("impossible to remove entry from catalog")
+		}
+	}
+
+
 	return nil
 }
 
 
 func (a *ConsulClient) deleteEntryByTags(tags []string) derrors.Error {
+	log.Debug().Interface("tags",tags).Msg("delete entry using tags")
 
 	// The current consul API does not filter services by tag
 	// https://github.com/hashicorp/consul/issues/4811
