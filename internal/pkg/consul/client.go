@@ -33,17 +33,25 @@ func NewConsulClient(address string) (*ConsulClient, derrors.Error) {
 }
 
 func (a *ConsulClient) Add(serviceName string, fqdn string, ip string, tags []string) derrors.Error {
-	entry := &api.AgentServiceRegistration{
-		Name:    fqdn,
+
+	// Register an external agent so we do not need a local agent running to control that service
+	entry := &api.CatalogRegistration{
+		Node: "dns-server-consul-server-0",
+		Datacenter:"dc1",
 		Address: ip,
-		Tags: tags,
-		ID: fmt.Sprintf("%s-%s",fqdn,ip),
+		Service: &api.AgentService{
+			Service: fqdn,
+			ID: fqdn,
+			Address: ip,
+			Tags: tags,
+		},
+		NodeMeta: map[string]string{
+			"external-node": "true",
+		},
 	}
-
-	err := a.client.Agent().ServiceRegister(entry)
-
+	_, err := a.client.Catalog().Register(entry, &api.WriteOptions{Datacenter:"dc1"})
 	if err != nil {
-		log.Error().Msg("Could not register service")
+		log.Error().Msg("impossible to register service in catalog")
 		return derrors.NewGenericError(err.Error())
 	}
 
@@ -71,11 +79,27 @@ func (a *ConsulClient) Delete(fqdn string, tags []string) derrors.Error {
 }
 
 func (a *ConsulClient) deleteEntryById(id string) derrors.Error {
-	err := a.client.Agent().ServiceDeregister(id)
+
+	// Get all the service information about the service to deregister
+	serv, _, err := a.client.Catalog().Service(id, "", &api.QueryOptions{Datacenter:"dc1"})
 	if err != nil {
-		log.Error().Err(err).Msgf("impossible to delete DNS entry for service %s", id)
-		return derrors.NewInternalError(fmt.Sprintf("impossible to delete DNS entry for service %s", id), err)
+		log.Error().Err(err).Str("serviceId",id).Msg("service not found")
+		return derrors.NewInternalError("service not found", err)
 	}
+
+	// there should ony be one entry, but we remove all just for the sake of completeness
+	for _, s := range serv {
+		dereq := api.CatalogDeregistration{
+			ServiceID: s.ServiceID,
+			Datacenter: s.Datacenter,
+			Address:s.Address,
+			Node: s.Node}
+		_, err = a.client.Catalog().Deregister(&dereq,&api.WriteOptions{Datacenter:"dc1"})
+		if err != nil {
+			log.Error().Err(err).Interface("request", dereq).Msg("impossible to remove entry from catalog")
+		}
+	}
+
 	return nil
 }
 
