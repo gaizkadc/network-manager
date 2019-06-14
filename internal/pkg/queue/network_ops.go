@@ -7,6 +7,7 @@ package queue
 import (
     "context"
     "github.com/nalej/nalej-bus/pkg/queue/network/ops"
+    "github.com/nalej/network-manager/internal/pkg/server/application"
     "github.com/nalej/network-manager/internal/pkg/server/dns"
     "github.com/nalej/network-manager/internal/pkg/server/networks"
     "github.com/rs/zerolog/log"
@@ -21,6 +22,8 @@ type NetworkOpsHandler struct {
     netManager *networks.Manager
     // dns manager
     dnsManager *dns.Manager
+    // network application manager
+    netAppManager *application.Manager
     // operations consumer
     consumer *ops.NetworkOpsConsumer
 }
@@ -29,8 +32,9 @@ type NetworkOpsHandler struct {
 // params:
 //  netManager
 //  cons
-func NewNetworkOpsHandler(netManager *networks.Manager, dnsManager *dns.Manager, consumer *ops.NetworkOpsConsumer) NetworkOpsHandler {
-    return NetworkOpsHandler{netManager: netManager, dnsManager: dnsManager, consumer: consumer}
+func NewNetworkOpsHandler(netManager *networks.Manager, dnsManager *dns.Manager, netAppManager *application.Manager,
+    consumer *ops.NetworkOpsConsumer) NetworkOpsHandler {
+    return NetworkOpsHandler{netManager: netManager, dnsManager: dnsManager, netAppManager: netAppManager, consumer: consumer}
 }
 
 func(n NetworkOpsHandler) Run() {
@@ -38,6 +42,8 @@ func(n NetworkOpsHandler) Run() {
     go n.consumeDisauthorizeMemberRequest()
     go n.consumeAddDNSEntryRequest()
     go n.consumeDeleteDNSEntryRequest()
+    go n.consumeInboundProxy()
+    go n.consumeOutboundProxy()
     go n.waitRequests()
 }
 
@@ -109,6 +115,30 @@ func(n NetworkOpsHandler) consumeDeleteDNSEntryRequest() {
         err := n.dnsManager.DeleteDNSEntry(received)
         if err != nil {
             log.Error().Err(err).Msg("failed processing delete dns entry request")
+        }
+    }
+}
+
+func (n NetworkOpsHandler) consumeInboundProxy() {
+    log.Debug().Msg("waiting for consume inbound proxy request...")
+    for {
+        received := <- n.consumer.Config.ChInboundServiceProxy
+        log.Debug().Interface("inboundServiceProxy", received).Msg("<- incoming inbound service proxy")
+        err := n.netAppManager.RegisterInboundServiceProxy(received)
+        if err != nil {
+            log.Error().Err(err).Msg("failed processing inbound service proxy")
+        }
+    }
+}
+
+func (n NetworkOpsHandler) consumeOutboundProxy() {
+    log.Debug().Msg("waiting for consume outbound proxy request...")
+    for {
+        received := <- n.consumer.Config.ChOutboundService
+        log.Debug().Interface("outboundServiceProxy", received).Msg("<- incoming outbound service proxy")
+        err := n.netAppManager.RegisterOutboundProxy(received)
+        if err != nil {
+            log.Error().Err(err).Msg("failed processing outbound service proxy")
         }
     }
 }

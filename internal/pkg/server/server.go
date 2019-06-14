@@ -8,6 +8,7 @@ import (
 	"github.com/nalej/nalej-bus/pkg/queue/network/ops"
 	"github.com/nalej/network-manager/internal/pkg/consul"
 	"github.com/nalej/network-manager/internal/pkg/queue"
+	"github.com/nalej/network-manager/internal/pkg/server/application"
 	"github.com/nalej/network-manager/internal/pkg/server/dns"
 	"github.com/nalej/network-manager/internal/pkg/server/networks"
 	"github.com/nalej/network-manager/internal/pkg/server/servicedns"
@@ -71,19 +72,24 @@ func (s *Server) Launch() {
 	servDNSManager := servicedns.NewManager(consulClient)
 	servDNSHandler := servicedns.NewHandler(servDNSManager)
 
+	// Service Net application
+	netAppManager := application.NewManager(smConn)
+	servNetAppHandler := application.NewHandler(*netAppManager)
+
 	// Queue manager
 	log.Info().Str("queueURL", s.Configuration.QueueAddress).Msg("instantiate message queue")
 	pulsarclient := pulsar_comcast.NewClient(s.Configuration.QueueAddress)
 
 	log.Info().Msg("initialize networks ops manager...")
 	networkOpsConfig := ops.NewConfigNetworksOpsConsumer(1, ops.ConsumableStructsNetworkOpsConsumer{
-		AuthorizeMember: true, DisauthorizeMember: true, AddDNSEntry: true, DeleteDNSEntry: true})
+		AuthorizeMember: true, DisauthorizeMember: true, AddDNSEntry: true, DeleteDNSEntry: true,
+		InboundServiceProxy: true, OutboundService: true})
 
 	networkOpsConsumer,err := ops.NewNetworkOpsConsumer(pulsarclient, "network-manager-network-ops", true, networkOpsConfig)
 	if err!=nil{
 		log.Panic().Err(err).Msg("impossible to initialize network ops manager")
 	}
-	networkOpsQueue := queue.NewNetworkOpsHandler(netManager, dnsManager, networkOpsConsumer)
+	networkOpsQueue := queue.NewNetworkOpsHandler(netManager, dnsManager, netAppManager, networkOpsConsumer)
 	networkOpsQueue.Run()
 	log.Info().Msg("initialize network ops manager done")
 
@@ -92,6 +98,7 @@ func (s *Server) Launch() {
 	grpc_network_go.RegisterNetworksServer(grpcServer, netHandler)
 	grpc_network_go.RegisterDNSServer(grpcServer, dnsHandler)
 	grpc_network_go.RegisterServiceDNSServer(grpcServer, servDNSHandler)
+	grpc_network_go.RegisterApplicationNetworkServer(grpcServer, servNetAppHandler)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(grpcServer)
