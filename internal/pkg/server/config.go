@@ -22,6 +22,12 @@ type Config struct {
 	DNSUrl string
 	// URL for the message queue
 	QueueAddress string
+	// UseTLS to connect to the application cluster API
+	UseTLS bool
+	// CaCertPath path for the CA
+	CaCertPath string
+	// SkipCaValidation decide whether to skip CA validation or not
+	SkipCAValidation bool
 }
 
 func (conf *Config) Validate() derrors.Error {
@@ -47,10 +53,7 @@ func (conf *Config) Validate() derrors.Error {
 }
 
 func (conf *Config) Print() {
-	log.Info().Int("port", conf.Port).Msg("gRPC port")
-	log.Info().Str("sm", conf.SystemModelURL).Msg("SM URL")
-	log.Info().Str("zturl", conf.ZTUrl).Msg("ZT URL")
-	log.Info().Str("ztaccesstoken", conf.ZTAccessToken).Msg("ZT Access Token")
-	log.Info().Str("dnsurl", conf.DNSUrl).Msg("Consul DNS URL")
-	log.Info().Str("queueAddress", conf.QueueAddress).Msg("Queue address")
+	log.Info().Interface("configuration", conf).Msg("defined network manager configuration")
 }
+
+
