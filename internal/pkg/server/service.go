@@ -8,28 +8,32 @@ import (
 	"github.com/nalej/nalej-bus/pkg/queue/network/ops"
 	"github.com/nalej/network-manager/internal/pkg/consul"
 	"github.com/nalej/network-manager/internal/pkg/queue"
+	"github.com/nalej/network-manager/internal/pkg/server/application"
 	"github.com/nalej/network-manager/internal/pkg/server/dns"
 	"github.com/nalej/network-manager/internal/pkg/server/networks"
 	"github.com/nalej/network-manager/internal/pkg/server/servicedns"
+	"github.com/nalej/network-manager/internal/pkg/utils"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
 )
 
-type Server struct {
+type Service struct {
 	Configuration Config
+	ConnHelper    *utils.ConnectionsHelper
 	Server        *tools.GenericGRPCServer
 }
 
-func NewServer(config Config) *Server {
-	return &Server{
-		config,
-		tools.NewGenericGRPCServer(uint32(config.Port)),
+func NewService(config Config) *Service {
+	return &Service{
+		Configuration: config,
+		ConnHelper: utils.NewConnectionsHelper(config.UseTLS,config.CaCertPath,config.SkipCAValidation),
+		Server: tools.NewGenericGRPCServer(uint32(config.Port)),
 	}
 }
 
-func (s *Server) Launch() {
+func (s *Service) Launch() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.Configuration.Port))
 	if err != nil {
@@ -71,27 +75,35 @@ func (s *Server) Launch() {
 	servDNSManager := servicedns.NewManager(consulClient)
 	servDNSHandler := servicedns.NewHandler(servDNSManager)
 
+
+
+	// Service Net application
+	netAppManager := application.NewManager(smConn, s.ConnHelper)
+	servNetAppHandler := application.NewHandler(*netAppManager)
+
 	// Queue manager
 	log.Info().Str("queueURL", s.Configuration.QueueAddress).Msg("instantiate message queue")
 	pulsarclient := pulsar_comcast.NewClient(s.Configuration.QueueAddress)
 
 	log.Info().Msg("initialize networks ops manager...")
 	networkOpsConfig := ops.NewConfigNetworksOpsConsumer(1, ops.ConsumableStructsNetworkOpsConsumer{
-		AuthorizeMember: true, DisauthorizeMember: true, AddDNSEntry: true, DeleteDNSEntry: true})
+		AuthorizeMember: true, DisauthorizeMember: true, AddDNSEntry: true, DeleteDNSEntry: true,
+		InboundServiceProxy: true, OutboundService: true})
 
 	networkOpsConsumer,err := ops.NewNetworkOpsConsumer(pulsarclient, "network-manager-network-ops", true, networkOpsConfig)
 	if err!=nil{
 		log.Panic().Err(err).Msg("impossible to initialize network ops manager")
 	}
-	networkOpsQueue := queue.NewNetworkOpsHandler(netManager, dnsManager, networkOpsConsumer)
+	networkOpsQueue := queue.NewNetworkOpsHandler(netManager, dnsManager, netAppManager, networkOpsConsumer)
 	networkOpsQueue.Run()
 	log.Info().Msg("initialize network ops manager done")
 
-	// gRPC Server
+	// gRPC Service
 	grpcServer := grpc.NewServer()
 	grpc_network_go.RegisterNetworksServer(grpcServer, netHandler)
 	grpc_network_go.RegisterDNSServer(grpcServer, dnsHandler)
 	grpc_network_go.RegisterServiceDNSServer(grpcServer, servDNSHandler)
+	grpc_network_go.RegisterApplicationNetworkServer(grpcServer, servNetAppHandler)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(grpcServer)

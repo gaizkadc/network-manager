@@ -81,6 +81,7 @@ func (m *Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkReques
 		OrganizationId: addNetworkRequest.OrganizationId,
 		AppInstanceId: addNetworkRequest.AppInstanceId,
 		NetworkId: toAdd.NetworkId,
+		VsaList: addNetworkRequest.Vsa,
 	}
 	_, err = m.ApplicationClient.AddAppZtNetwork(context.Background(), &netReq)
 	if err != nil {

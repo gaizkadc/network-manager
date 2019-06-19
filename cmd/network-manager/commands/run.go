@@ -33,7 +33,7 @@ var runCmd = &cobra.Command{
 		}
 
 
-		s := server.NewServer(config)
+		s := server.NewService(config)
 		s.Launch()
 	},
 }
@@ -46,4 +46,7 @@ func init() {
 	runCmd.Flags().StringVar(&config.ZTAccessToken, "ztaccesstoken", "", "ZT Access Token")
 	runCmd.Flags().StringVar(&config.DNSUrl, "dnsurl", "192.168.99.100:30500", "Consul DNS URL")
 	runCmd.Flags().StringVar(&config.QueueAddress, "queueAddress", "localhost:6650", "Message queue (localhost:6650)")
+	runCmd.Flags().BoolVar(&config.UseTLS,"useTLS", true, "Use TLS to connect to the application cluster API")
+	runCmd.Flags().StringVar(&config.CaCertPath,"caCertPath", "", "Part for the CA certificate")
+	runCmd.Flags().BoolVar(&config.SkipCAValidation, "skipCAValidation", true, "Skip CA authentication validation")
 }
