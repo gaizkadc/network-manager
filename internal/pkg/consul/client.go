@@ -72,7 +72,6 @@ func (a *ConsulClient) Delete(fqdn string, tags []string) derrors.Error {
 
 	// delete the associated node
 
-
 	if tags == nil || len(tags) == 0 {
 		// remove using the FQDN
 		return a.deleteEntryById(fqdn)
@@ -87,38 +86,14 @@ func (a *ConsulClient) deleteEntryById(id string) derrors.Error {
 	// Remove the associated consul node to get rid of any everything.
 	dereg := api.CatalogDeregistration{
 		Datacenter: "dc1",
-		Node: id,
+		Node:       id,
 	}
 	_, err := a.client.Catalog().Deregister(&dereg, &api.WriteOptions{Datacenter: "dc1"})
 	if err != nil {
-		log.Error().Err(err).Str("serviceId",id).Msg("service not found")
+		log.Error().Err(err).Str("serviceId", id).Msg("service not found")
 		return derrors.NewInternalError("service not found", err)
 	}
 	return nil
-
-	/*
-	// Get all the service information about the service to deregister
-	serv, _, err := a.client.Catalog().Service(id, "", &api.QueryOptions{Datacenter:"dc1"})
-	if err != nil {
-		log.Error().Err(err).Str("serviceId",id).Msg("service not found")
-		return derrors.NewInternalError("service not found", err)
-	}
-
-	// there should ony be one entry, but we remove all just for the sake of completeness
-	for _, s := range serv {
-		dereq := api.CatalogDeregistration{
-			ServiceID: s.ServiceID,
-			Datacenter: s.Datacenter,
-			Address:s.Address,
-			Node: s.Node}
-		_, err = a.client.Catalog().Deregister(&dereq,&api.WriteOptions{Datacenter:"dc1"})
-		if err != nil {
-			log.Error().Err(err).Interface("request", dereq).Msg("impossible to remove entry from catalog")
-		}
-	}
-
-	return nil
-	*/
 }
 
 
