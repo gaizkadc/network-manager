@@ -36,7 +36,7 @@ func (a *ConsulClient) Add(serviceName string, fqdn string, ip string, tags []st
 
 	// Register an external agent so we do not need a local agent running to control that service
 	entry := &api.CatalogRegistration{
-		Node: "dns-server-consul-server-0",
+		Node: fqdn,
 		Datacenter:"dc1",
 		Address: ip,
 		Service: &api.AgentService{
@@ -69,6 +69,10 @@ func (a *ConsulClient) Add(serviceName string, fqdn string, ip string, tags []st
 // return:
 //  error if any
 func (a *ConsulClient) Delete(fqdn string, tags []string) derrors.Error {
+
+	// delete the associated node
+
+
 	if tags == nil || len(tags) == 0 {
 		// remove using the FQDN
 		return a.deleteEntryById(fqdn)
@@ -80,6 +84,19 @@ func (a *ConsulClient) Delete(fqdn string, tags []string) derrors.Error {
 
 func (a *ConsulClient) deleteEntryById(id string) derrors.Error {
 
+	// Remove the associated consul node to get rid of any everything.
+	dereg := api.CatalogDeregistration{
+		Datacenter: "dc1",
+		Node: id,
+	}
+	_, err := a.client.Catalog().Deregister(&dereg, &api.WriteOptions{Datacenter: "dc1"})
+	if err != nil {
+		log.Error().Err(err).Str("serviceId",id).Msg("service not found")
+		return derrors.NewInternalError("service not found", err)
+	}
+	return nil
+
+	/*
 	// Get all the service information about the service to deregister
 	serv, _, err := a.client.Catalog().Service(id, "", &api.QueryOptions{Datacenter:"dc1"})
 	if err != nil {
@@ -101,6 +118,7 @@ func (a *ConsulClient) deleteEntryById(id string) derrors.Error {
 	}
 
 	return nil
+	*/
 }
 
 

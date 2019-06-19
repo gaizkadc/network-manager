@@ -20,7 +20,7 @@ import (
 )
 
 const (
-    ApplicationManagerTimeout = time.Second * 5
+    ApplicationManagerTimeout = time.Second * 3
 )
 
 type Manager struct {
@@ -117,28 +117,48 @@ func (m *Manager) RegisterOutboundProxy(request *grpc_network_go.OutboundService
             log.Error().Interface("proxies", net).Str("fqdn",fqdn).Msg("not found proxies for the service")
             continue
         }
-        routing[fqdn] = targetProxy.List[0].Ip
+        // get the virtual ip for this FQDN
+        virtualIP, found := net.VsaList[fqdn]
+        if !found {
+            log.Error().Interface("virtualIP",net.VsaList).Msgf("unknown virtual ip for FQDN %s", fqdn)
+            continue
+        }
+        routing[virtualIP] = targetProxy.List[0].Ip
     }
+
 
     // Update the routing table
-    for vsa, ip := range routing {
-        route := grpc_deployment_manager_go.ServiceRoute{
+    for virtualIP, ip := range routing {
+        route := grpc_deployment_manager_go.ServiceRoute {
             OrganizationId: request.OrganizationId,
-            AppInstanceId: request.AppInstanceId,
+            AppInstanceId:  request.AppInstanceId,
             ServiceGroupId: targetService.ServiceGroupId,
-            ServiceId: targetService.ServiceGroupId,
-            Vsa: vsa,
-            RedirectToVpn: ip,
-            Drop: false,
+            ServiceId:      targetService.ServiceId,
+            Vsa:            virtualIP,
+            RedirectToVpn:  ip,
+            Drop:           false,
+        }
+        targetCluster, found := m.connHelper.ClusterReference[request.ClusterId]
+        if !found {
+            return derrors.NewNotFoundError(fmt.Sprintf("impossible to find connection to cluster %s", request.ClusterId))
+        }
+        clusterAddress := fmt.Sprintf("%s:%d", targetCluster.Hostname, utils.APP_CLUSTER_API_PORT)
+        conn, err := m.connHelper.GetAppClusterClients().GetConnection(clusterAddress)
+        if err != nil {
+            return derrors.NewInternalError("impossible to get cluster connection", err)
         }
 
-        // Send it.
+        client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
+        ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+        defer cancel()
+        log.Debug().Str("clusterId", request.ClusterId).Interface("request", route).Msg("set route update")
+        _, err = client.SetServiceRoute(ctx, &route)
+        if err != nil {
+            log.Error().Err(err).Msg("there was an error setting a new route")
+            return derrors.NewInternalError("there was an error setting a new route",err)
+        }
     }
-
-
-
-
-
+    return nil
 
 }
 
@@ -170,9 +190,24 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
         }
     }
 
+    // Get available VSA
+    ctx2, cancel2 := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+    defer cancel2()
+    net, err := m.applicationClient.GetAppZtNetwork(ctx2, &grpc_application_go.GetAppZtNetworkRequest{
+        OrganizationId: organizationId, AppInstanceId: appInstanceId})
+    if err != nil {
+        return derrors.NewInternalError("impossible to retrieve network data", err)
+    }
+
     for clusterId, _ := range clusterSet {
+        virtualIP, found := net.VsaList[fqdn]
+        if !found {
+            log.Warn().Interface("vsa",net.VsaList).Msgf("unknown VSA for FQDN %s", fqdn)
+            continue
+        }
+        // get the ip for the VSA
         newRoute := grpc_deployment_manager_go.ServiceRoute{
-            Vsa: fqdn,
+            Vsa: virtualIP,
             OrganizationId: organizationId,
             AppInstanceId: appInstanceId,
             ServiceId: serviceId,
