@@ -66,6 +66,7 @@ func (m *Manager) RegisterInboundServiceProxy(request *grpc_network_go.InboundSe
         log.Error().Err(err).Msg("there was an error setting a new route after registering inbound")
         return derrors.NewInternalError("there was an error setting a new route after registering inbound",err)
     }
+    return nil
 }
 
 
