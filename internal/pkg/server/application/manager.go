@@ -64,6 +64,132 @@ func (m *Manager) RegisterInboundServiceProxy(request *grpc_network_go.InboundSe
 
 }
 
+
+
+func (m *Manager) RegisterOutboundProxy(request *grpc_network_go.OutboundService) derrors.Error {
+
+    ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+    defer cancel()
+    appInstance, err := m.applicationClient.GetAppInstance(ctx, &grpc_application_go.AppInstanceId{
+        OrganizationId: request.OrganizationId, AppInstanceId: request.AppInstanceId})
+    if err != nil {
+        return derrors.NewInternalError("impossible to retrieve application instance", err)
+    }
+
+    // find service_group and service ids
+    var targetService *grpc_application_go.ServiceInstance = nil
+    for _, g := range appInstance.Groups {
+        if g.ServiceGroupInstanceId == request.ServiceGroupInstanceId {
+            for _, serv := range g.ServiceInstances {
+                if serv.ServiceInstanceId == request.ServiceInstanceId {
+                    targetService = serv
+                    break
+                }
+            }
+        }
+    }
+
+    if targetService == nil {
+        return derrors.NewInternalError("service instance not found in application instance descriptor")
+
+    }
+
+    // find what services the service can access through the net
+    allowedServices := m.getServicesIAccess(appInstance, targetService.Name)
+
+    if len(allowedServices) == 0 {
+        // no allowed network connections. stop
+        return nil
+    }
+
+    // Get available VSA
+    ctx2, cancel2 := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+    defer cancel2()
+    net, err := m.applicationClient.GetAppZtNetwork(ctx2, &grpc_application_go.GetAppZtNetworkRequest{
+        OrganizationId: request.OrganizationId, AppInstanceId: request.AppInstanceId})
+    if err != nil {
+        return derrors.NewInternalError("impossible to retrieve network data", err)
+    }
+
+    // Store the routing table here
+    routing := make(map[string]string,0)
+    for _, allowed := range allowedServices {
+        vsa := utils.GetVSAName(allowed, appInstance.OrganizationId, appInstance.AppInstanceId)
+        virtualIP, found := net.VsaList[vsa]
+        if !found {
+            log.Error().Interface("virtualIP",net.VsaList).Msgf("unknown virtual ip for VSA %s", vsa)
+            continue
+        }
+
+        proxiesPerCluster, found := net.AvailableProxies[vsa]
+        if !found {
+            // we have no available proxies yet
+            log.Warn().Interface("knownProxies", net.AvailableProxies).Msg("no available proxies yet")
+            continue
+        }
+        // first we pick the local proxy when possible
+        proxiesInCluster, found := proxiesPerCluster.ProxiesPerCluster[targetService.DeployedOnClusterId]
+        //var targetProxy proxie
+        var targetProxy *grpc_application_go.ServiceProxy = nil
+        if !found {
+            // not found, simply pick the first we find
+            for _, proxies := range proxiesPerCluster.ProxiesPerCluster {
+                // Now simply select the first entry
+                targetProxy = proxies.List[0]
+                break
+            }
+        } else {
+            // take the firs available proxy from our cluster
+            targetProxy = proxiesInCluster.List[0]
+        }
+
+
+        if targetProxy == nil {
+            // no proxies are available yet for this service
+            log.Error().Interface("proxies", net).Str("vsa",vsa).Msg("not found proxies for the service")
+            continue
+        }
+
+        routing[virtualIP] = targetProxy.Ip
+    }
+
+    // Update the routing table
+    for virtualIP, ip := range routing {
+        route := grpc_deployment_manager_go.ServiceRoute {
+            OrganizationId: request.OrganizationId,
+            AppInstanceId:  request.AppInstanceId,
+            ServiceGroupId: targetService.ServiceGroupId,
+            ServiceId:      targetService.ServiceId,
+            Vsa:            virtualIP,
+            RedirectToVpn:  ip,
+            Drop:           false,
+        }
+        targetCluster, found := m.connHelper.ClusterReference[request.ClusterId]
+        if !found {
+            return derrors.NewNotFoundError(fmt.Sprintf("impossible to find connection to cluster %s", request.ClusterId))
+        }
+        clusterAddress := fmt.Sprintf("%s:%d", targetCluster.Hostname, utils.APP_CLUSTER_API_PORT)
+        conn, err := m.connHelper.GetAppClusterClients().GetConnection(clusterAddress)
+        if err != nil {
+            return derrors.NewInternalError("impossible to get cluster connection", err)
+        }
+
+        client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
+        ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+        defer cancel()
+        log.Debug().Str("clusterId", request.ClusterId).Interface("request", route).Msg("set route update")
+        _, err = client.SetServiceRoute(ctx, &route)
+        if err != nil {
+            log.Error().Err(err).Msg("there was an error setting a new route")
+            return derrors.NewInternalError("there was an error setting a new route",err)
+        }
+    }
+    return nil
+
+}
+
+
+/*
 func (m *Manager) RegisterOutboundProxy(request *grpc_network_go.OutboundService) derrors.Error {
 
     ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
@@ -161,7 +287,7 @@ func (m *Manager) RegisterOutboundProxy(request *grpc_network_go.OutboundService
     return nil
 
 }
-
+*/
 
 func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId string, fqdn string, ip string,
     serviceGroupId string, serviceId string, drop bool) derrors.Error {
@@ -182,13 +308,37 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
         return derrors.NewUnavailableError("impossible to find application descriptor", err)
     }
 
-    // build an iterable structure to have the list of clusters this application is deployed into
-    clusterSet := make(map[string]bool,0)
+
+    // find the service proxy name
+    proxyServiceName := ""
+    // map to translate service names with service ids
+    // service_name -> service_id
+    serviceNameDict := make(map[string]string,0)
+    // cluster and list of services to be informed in every cluster
+    // service_id -> cluster_id
+    allowedServiceCluster := make(map[string]string,0)
     for _, group := range appInstance.Groups {
-        for _, serv := range group.ServiceInstances {
-            clusterSet[serv.DeployedOnClusterId] = true
+        if group.ServiceGroupId == serviceGroupId {
+            for _, service := range group.ServiceInstances {
+                if service.ServiceId == serviceId {
+                    // fill the name of the proxy service
+                    proxyServiceName = service.Name
+                }
+                serviceNameDict[service.Name] = service.ServiceId
+                allowedServiceCluster[serviceId] = service.DeployedOnClusterId
+            }
         }
     }
+
+
+    // find the list of services that can access this service and their clusters
+    // [serviceName0, serviceName1...]
+    allowedServices := m.getAllowedServices(appInstance, proxyServiceName)
+    if len(allowedServices) == 0 {
+        // there are no services allowed to access this service
+        return nil
+    }
+
 
     // Get available VSA
     ctx2, cancel2 := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
@@ -199,12 +349,18 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
         return derrors.NewInternalError("impossible to retrieve network data", err)
     }
 
-    for clusterId, _ := range clusterSet {
+
+    for _, allowedServiceName := range allowedServices {
+        allowedServiceId := serviceNameDict[allowedServiceName]
+
         virtualIP, found := net.VsaList[fqdn]
         if !found {
             log.Warn().Interface("vsa",net.VsaList).Msgf("unknown VSA for FQDN %s", fqdn)
             continue
         }
+
+        clusterId, _ := allowedServiceCluster[allowedServiceId]
+
         // get the ip for the VSA
         newRoute := grpc_deployment_manager_go.ServiceRoute{
             Vsa: virtualIP,
@@ -239,5 +395,88 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
     }
 
     return nil
+}
 
+// Local function to get all the services that can access me.
+// params:
+//  appInstance
+//  serviceName service to be checked
+// return:
+//  list with the name of the services that can be accessed
+func (m *Manager) getAllowedServices(appInstance *grpc_application_go.AppInstance, serviceName string) []string {
+    //list with the name of all the services
+    allServices := make(map[string]bool,0)
+    for _, g := range appInstance.Groups {
+        for _, s := range g.ServiceInstances {
+            allServices[s.Name] = true
+        }
+    }
+
+    allowedServices := make([]string,0)
+    for _, rule := range appInstance.Rules {
+        // this is the service we are looking for and it is opened
+        if rule.TargetServiceName == serviceName {
+            switch rule.Access {
+            case grpc_application_go.PortAccess_ALL_APP_SERVICES:
+                // open access, we have permission to access this
+                for name, _ := range allServices {
+                    allowedServices = append(allowedServices, name)
+                }
+
+            case grpc_application_go.PortAccess_APP_SERVICES:
+                // this is only granted for the specified list of services, check if we are in
+                if rule.AuthServices != nil {
+                    for _, grantedServiceName := range rule.AuthServices {
+                        if grantedServiceName == serviceName {
+                            allowedServices = append(allowedServices, grantedServiceName)
+                        }
+                    }
+                }
+            }
+            break
+        }
+    }
+    log.Debug().Interface("allowedServices", allowedServices).Str("serviceName",serviceName).
+        Msg("list of allowed services that can connect this service")
+    return allowedServices
+}
+
+// Local function to obtain the list of services a service can access. This operation is needed
+// to inform outbound connections about new VSA
+// params:
+//  appInstance
+//  serviceName service to be checked
+// return:
+//  list of services that can be access
+func (m *Manager) getServicesIAccess(appInstance *grpc_application_go.AppInstance, serviceName string) [] string {
+    //list with the name of all the services
+    allServices := make(map[string]bool,0)
+    for _, g := range appInstance.Groups {
+        for _, s := range g.ServiceInstances {
+            allServices[s.Name] = true
+        }
+    }
+
+    allowedServices := make([]string,0)
+    for _, rule := range appInstance.Rules {
+        // this is the service we are looking for and it is opened
+       switch rule.Access {
+        case grpc_application_go.PortAccess_ALL_APP_SERVICES:
+            // open access, we have permission to access this
+             allowedServices = append(allowedServices, rule.TargetServiceName)
+
+        case grpc_application_go.PortAccess_APP_SERVICES:
+            // this is only granted if we are in the list
+            if rule.AuthServices != nil {
+                for _, grantedServiceName := range rule.AuthServices {
+                    if grantedServiceName == serviceName {
+                        allowedServices = append(allowedServices, rule.TargetServiceName)
+                    }
+                }
+            }
+        }
+    }
+    log.Debug().Interface("servicesIAccess", allowedServices).Str("serviceName",serviceName).
+        Msg("list of allowed services this service can connect to")
+    return allowedServices
 }
