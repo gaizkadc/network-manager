@@ -59,9 +59,13 @@ func (m *Manager) RegisterInboundServiceProxy(request *grpc_network_go.InboundSe
     }
 
     // Inform pods about new available entities
-    return m.updateRoutesApplication(request.OrganizationId, request.AppInstanceId, request.Fqdn, request.Ip,
+    err = m.updateRoutesApplication(request.OrganizationId, request.AppInstanceId, request.Fqdn, request.Ip,
         request.ServiceGroupId, request.ServiceId, false)
 
+    if err != nil {
+        log.Error().Err(err).Msg("there was an error setting a new route after registering inbound")
+        return derrors.NewInternalError("there was an error setting a new route after registering inbound",err)
+    }
 }
 
 
@@ -180,114 +184,14 @@ func (m *Manager) RegisterOutboundProxy(request *grpc_network_go.OutboundService
         log.Debug().Str("clusterId", request.ClusterId).Interface("request", route).Msg("set route update")
         _, err = client.SetServiceRoute(ctx, &route)
         if err != nil {
-            log.Error().Err(err).Msg("there was an error setting a new route")
-            return derrors.NewInternalError("there was an error setting a new route",err)
+            log.Error().Err(err).Msg("there was an error setting a new route after registering outbound")
+            return derrors.NewInternalError("there was an error setting a new route after registering outbound",err)
         }
     }
     return nil
 
 }
 
-
-/*
-func (m *Manager) RegisterOutboundProxy(request *grpc_network_go.OutboundService) derrors.Error {
-
-    ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-    defer cancel()
-    appInstance, err := m.applicationClient.GetAppInstance(ctx, &grpc_application_go.AppInstanceId{
-        OrganizationId: request.OrganizationId, AppInstanceId: request.AppInstanceId})
-    if err != nil {
-        return derrors.NewInternalError("impossible to retrieve application instance", err)
-    }
-
-    // find service_group and service ids
-    var targetService *grpc_application_go.ServiceInstance = nil
-    for _, g := range appInstance.Groups {
-        if g.ServiceGroupInstanceId == request.ServiceGroupInstanceId {
-            for _, serv := range g.ServiceInstances {
-                if serv.ServiceInstanceId == request.ServiceInstanceId {
-                    targetService = serv
-                    break
-                }
-            }
-        }
-    }
-
-    if targetService == nil {
-        return derrors.NewInternalError("service instance not found in application instance descriptor")
-    }
-
-    // Get available VSA
-    ctx2, cancel2 := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-    defer cancel2()
-    net, err := m.applicationClient.GetAppZtNetwork(ctx2, &grpc_application_go.GetAppZtNetworkRequest{
-        OrganizationId: request.OrganizationId, AppInstanceId: request.AppInstanceId})
-    if err != nil {
-        return derrors.NewInternalError("impossible to retrieve network data", err)
-    }
-
-    // Store the routing table here
-    routing := make(map[string]string,0)
-    // proxies for the service
-    for fqdn, proxies := range net.AvailableProxies {
-        // if a proxy is already available in the same cluster
-        targetProxy, found := proxies.ProxiesPerCluster[targetService.DeployedOnClusterId]
-        if !found {
-           for _, proxy := range proxies.ProxiesPerCluster {
-               targetProxy = proxy
-               break
-           }
-        }
-        if targetProxy == nil {
-            // no proxies are available yet for this service
-            log.Error().Interface("proxies", net).Str("fqdn",fqdn).Msg("not found proxies for the service")
-            continue
-        }
-        // get the virtual ip for this FQDN
-        virtualIP, found := net.VsaList[fqdn]
-        if !found {
-            log.Error().Interface("virtualIP",net.VsaList).Msgf("unknown virtual ip for FQDN %s", fqdn)
-            continue
-        }
-        routing[virtualIP] = targetProxy.List[0].Ip
-    }
-
-
-    // Update the routing table
-    for virtualIP, ip := range routing {
-        route := grpc_deployment_manager_go.ServiceRoute {
-            OrganizationId: request.OrganizationId,
-            AppInstanceId:  request.AppInstanceId,
-            ServiceGroupId: targetService.ServiceGroupId,
-            ServiceId:      targetService.ServiceId,
-            Vsa:            virtualIP,
-            RedirectToVpn:  ip,
-            Drop:           false,
-        }
-        targetCluster, found := m.connHelper.ClusterReference[request.ClusterId]
-        if !found {
-            return derrors.NewNotFoundError(fmt.Sprintf("impossible to find connection to cluster %s", request.ClusterId))
-        }
-        clusterAddress := fmt.Sprintf("%s:%d", targetCluster.Hostname, utils.APP_CLUSTER_API_PORT)
-        conn, err := m.connHelper.GetAppClusterClients().GetConnection(clusterAddress)
-        if err != nil {
-            return derrors.NewInternalError("impossible to get cluster connection", err)
-        }
-
-        client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
-        ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-        defer cancel()
-        log.Debug().Str("clusterId", request.ClusterId).Interface("request", route).Msg("set route update")
-        _, err = client.SetServiceRoute(ctx, &route)
-        if err != nil {
-            log.Error().Err(err).Msg("there was an error setting a new route")
-            return derrors.NewInternalError("there was an error setting a new route",err)
-        }
-    }
-    return nil
-
-}
-*/
 
 func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId string, fqdn string, ip string,
     serviceGroupId string, serviceId string, drop bool) derrors.Error {
@@ -427,17 +331,15 @@ func (m *Manager) getAllowedServices(appInstance *grpc_application_go.AppInstanc
                 // this is only granted for the specified list of services, check if we are in
                 if rule.AuthServices != nil {
                     for _, grantedServiceName := range rule.AuthServices {
-                        if grantedServiceName == serviceName {
-                            allowedServices = append(allowedServices, grantedServiceName)
-                        }
+                        allowedServices = append(allowedServices, grantedServiceName)
                     }
                 }
             }
             break
         }
     }
-    log.Debug().Interface("allowedServices", allowedServices).Str("serviceName",serviceName).
-        Msg("list of allowed services that can connect this service")
+    log.Debug().Interface("grantedServices", allowedServices).Str("serviceName",serviceName).
+        Msg("the service can be accessed by...")
     return allowedServices
 }
 
@@ -476,7 +378,7 @@ func (m *Manager) getServicesIAccess(appInstance *grpc_application_go.AppInstanc
             }
         }
     }
-    log.Debug().Interface("servicesIAccess", allowedServices).Str("serviceName",serviceName).
-        Msg("list of allowed services this service can connect to")
+    log.Debug().Interface("grantedServices", allowedServices).Str("serviceName",serviceName).
+        Msg("this service can access...")
     return allowedServices
 }
