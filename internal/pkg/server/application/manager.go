@@ -220,17 +220,19 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
     // service_name -> service_id
     serviceNameDict := make(map[string]string,0)
     // cluster and list of services to be informed in every cluster
-    // service_id -> cluster_id
-    allowedServiceCluster := make(map[string]string,0)
+    // service_id -> [cluster_id0,cluster_id1...]
+    servicesCluster := make(map[string][]string,0)
     for _, group := range appInstance.Groups {
-        if group.ServiceGroupId == serviceGroupId {
-            for _, service := range group.ServiceInstances {
-                if service.ServiceId == serviceId {
-                    // fill the name of the proxy service
-                    proxyServiceName = service.Name
-                }
-                serviceNameDict[service.Name] = service.ServiceId
-                allowedServiceCluster[serviceId] = service.DeployedOnClusterId
+        for _, service := range group.ServiceInstances {
+            if service.ServiceGroupId == serviceGroupId && service.ServiceId == serviceId {
+                // fill the name of the proxy service
+                proxyServiceName = service.Name
+            }
+            serviceNameDict[service.Name] = service.ServiceId
+            if _, found := servicesCluster[serviceId]; !found {
+                servicesCluster[serviceId] = []string{service.DeployedOnClusterId}
+            } else {
+                servicesCluster[serviceId] = append(servicesCluster[serviceId], service.DeployedOnClusterId)
             }
         }
     }
@@ -264,7 +266,7 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
             continue
         }
 
-        clusterId, _ := allowedServiceCluster[allowedServiceId]
+        clusterIds, _ := servicesCluster[allowedServiceId]
 
         // get the ip for the VSA
         newRoute := grpc_deployment_manager_go.ServiceRoute{
@@ -277,25 +279,30 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
             Drop: false,
         }
 
-        // and the client
-        targetCluster, found := m.connHelper.ClusterReference[clusterId]
-        if !found {
-            return derrors.NewNotFoundError(fmt.Sprintf("impossible to find connection to cluster %s", clusterId))
-        }
-        clusterAddress := fmt.Sprintf("%s:%d", targetCluster.Hostname, utils.APP_CLUSTER_API_PORT)
-        conn, err := m.connHelper.GetAppClusterClients().GetConnection(clusterAddress)
-        if err != nil {
-            return derrors.NewInternalError("impossible to get cluster connection", err)
-        }
+        // for every cluster where this service was deployed
+        for _, clusterId := range clusterIds {
+            // and the client
+            targetCluster, found := m.connHelper.ClusterReference[clusterId]
+            if !found {
+                log.Error().Interface("servicesCluster",servicesCluster).Interface("serviceNameDict",serviceNameDict).
+                    Interface("allowedServiceName",allowedServiceName).Msg("at the point of error")
+                return derrors.NewNotFoundError(fmt.Sprintf("impossible to find connection to cluster %s", clusterId))
+            }
+            clusterAddress := fmt.Sprintf("%s:%d", targetCluster.Hostname, utils.APP_CLUSTER_API_PORT)
+            conn, err := m.connHelper.GetAppClusterClients().GetConnection(clusterAddress)
+            if err != nil {
+                return derrors.NewInternalError("impossible to get cluster connection", err)
+            }
 
-        client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
-        ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-        defer cancel()
-        log.Debug().Str("clusterId", clusterId).Interface("request", newRoute).Msg("set route update")
-        _, err = client.SetServiceRoute(ctx, &newRoute)
-        if err != nil {
-            log.Error().Err(err).Msg("there was an error setting a new route")
-            return derrors.NewInternalError("there was an error setting a new route",err)
+            client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
+            ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+            defer cancel()
+            log.Debug().Str("clusterId", clusterId).Interface("request", newRoute).Msg("set route update")
+            _, err = client.SetServiceRoute(ctx, &newRoute)
+            if err != nil {
+                log.Error().Err(err).Msg("there was an error setting a new route")
+                return derrors.NewInternalError("there was an error setting a new route",err)
+            }
         }
     }
 
