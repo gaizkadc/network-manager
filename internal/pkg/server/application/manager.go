@@ -129,7 +129,8 @@ func (m *Manager) RegisterOutboundProxy(request *grpc_network_go.OutboundService
         proxiesPerCluster, found := net.AvailableProxies[vsa]
         if !found {
             // we have no available proxies yet
-            log.Warn().Interface("knownProxies", net.AvailableProxies).Msg("no available proxies yet")
+            log.Warn().Interface("knownProxies", net.AvailableProxies).
+                Str("vsa",vsa).Msg("no available proxies yet for this VSA")
             continue
         }
         // first we pick the local proxy when possible
@@ -219,6 +220,8 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
     // map to translate service names with service ids
     // service_name -> service_id
     serviceNameDict := make(map[string]string,0)
+    // map to get the service group id of  service by its name
+    serviceGroupDict := make(map[string]string,0)
     // cluster and list of services to be informed in every cluster
     // service_id -> [cluster_id0,cluster_id1...]
     servicesCluster := make(map[string][]string,0)
@@ -229,10 +232,11 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
                 proxyServiceName = service.Name
             }
             serviceNameDict[service.Name] = service.ServiceId
+            serviceGroupDict[service.Name] = service.ServiceGroupId
             if _, found := servicesCluster[serviceId]; !found {
-                servicesCluster[serviceId] = []string{service.DeployedOnClusterId}
+                servicesCluster[service.ServiceId] = []string{service.DeployedOnClusterId}
             } else {
-                servicesCluster[serviceId] = append(servicesCluster[serviceId], service.DeployedOnClusterId)
+                servicesCluster[service.ServiceId] = append(servicesCluster[serviceId], service.DeployedOnClusterId)
             }
         }
     }
@@ -243,6 +247,7 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
     allowedServices := m.getAllowedServices(appInstance, proxyServiceName)
     if len(allowedServices) == 0 {
         // there are no services allowed to access this service
+        log.Debug().Str("targetService", proxyServiceName).Msg("no services are authorized to access this service")
         return nil
     }
 
@@ -259,6 +264,7 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
 
     for _, allowedServiceName := range allowedServices {
         allowedServiceId := serviceNameDict[allowedServiceName]
+        allowedServiceGroupId := serviceGroupDict[allowedServiceName]
 
         virtualIP, found := net.VsaList[fqdn]
         if !found {
@@ -273,8 +279,8 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
             Vsa: virtualIP,
             OrganizationId: organizationId,
             AppInstanceId: appInstanceId,
-            ServiceId: serviceId,
-            ServiceGroupId: serviceGroupId,
+            ServiceId: allowedServiceId,
+            ServiceGroupId: allowedServiceGroupId,
             RedirectToVpn: ip,
             Drop: false,
         }
@@ -284,8 +290,6 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
             // and the client
             targetCluster, found := m.connHelper.ClusterReference[clusterId]
             if !found {
-                log.Error().Interface("servicesCluster",servicesCluster).Interface("serviceNameDict",serviceNameDict).
-                    Interface("allowedServiceName",allowedServiceName).Msg("at the point of error")
                 return derrors.NewNotFoundError(fmt.Sprintf("impossible to find connection to cluster %s", clusterId))
             }
             clusterAddress := fmt.Sprintf("%s:%d", targetCluster.Hostname, utils.APP_CLUSTER_API_PORT)
