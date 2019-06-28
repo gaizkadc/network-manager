@@ -21,6 +21,8 @@ import (
 
 const (
     ApplicationManagerTimeout = time.Second * 3
+    // Number of retries to be done when updating routes
+    ApplicationManagerUpdateRetries = 5
 )
 
 type Manager struct {
@@ -59,10 +61,20 @@ func (m *Manager) RegisterInboundServiceProxy(request *grpc_network_go.InboundSe
     }
 
     // Inform pods about new available entities
-    err = m.updateRoutesApplication(request.OrganizationId, request.AppInstanceId, request.Fqdn, request.Ip,
-        request.ServiceGroupId, request.ServiceId, false)
+    var updateErr error = nil
+    for i:=0; i < ApplicationManagerUpdateRetries; i++ {
+        err = m.updateRoutesApplication(request.OrganizationId, request.AppInstanceId, request.Fqdn, request.Ip,
+            request.ServiceGroupId, request.ServiceId, false)
+        if err != nil {
+            log.Error().Err(err).Msgf("attempt %d updating routes failed")
+            time.Sleep(ApplicationManagerTimeout)
+        } else {
+            updateErr = err
+            break
+        }
+    }
 
-    if err != nil {
+    if updateErr != nil {
         log.Error().Err(err).Msg("there was an error setting a new route after registering inbound")
         return derrors.NewInternalError("there was an error setting a new route after registering inbound",err)
     }
