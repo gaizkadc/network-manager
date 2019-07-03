@@ -192,15 +192,24 @@ func (m *Manager) RegisterOutboundProxy(request *grpc_network_go.OutboundService
             return derrors.NewInternalError("impossible to get cluster connection", err)
         }
 
-        client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
-        ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-        defer cancel()
-        log.Debug().Str("clusterId", request.ClusterId).Interface("request", route).Msg("set route update")
-        _, err = client.SetServiceRoute(ctx, &route)
-        if err != nil {
-            log.Error().Err(err).Msg("there was an error setting a new route after registering outbound")
-            return derrors.NewInternalError("there was an error setting a new route after registering outbound",err)
+
+        for i:=0; i < ApplicationManagerUpdateRetries; i++ {
+
+            client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
+            ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+            defer cancel()
+            log.Debug().Str("clusterId", request.ClusterId).Interface("request", route).Msg("set route update")
+            _, err = client.SetServiceRoute(ctx, &route)
+            if err != nil {
+                log.Error().Err(err).Msg("there was an error setting a new route after registering outbound")
+                time.Sleep(ApplicationManagerTimeout)
+                // return derrors.NewInternalError("there was an error setting a new route after registering outbound",err)
+            } else {
+                break
+            }
         }
+
+
     }
     return nil
 
