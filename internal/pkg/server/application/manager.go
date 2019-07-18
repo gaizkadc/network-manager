@@ -268,7 +268,8 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
     allowedServices := m.getAllowedServices(appInstance, proxyServiceName)
     if len(allowedServices) == 0 {
         // there are no services allowed to access this service
-        log.Debug().Str("targetService", proxyServiceName).Msg("no services are authorized to access this service")
+        log.Debug().Str("targetService", proxyServiceName).Interface("allowedServices", allowedServices).
+            Msg("no services are authorized to access this service")
         return nil
     }
 
@@ -348,7 +349,7 @@ func (m *Manager) getAllowedServices(appInstance *grpc_application_go.AppInstanc
             allServices[s.Name] = true
         }
     }
-
+    
     allowedServices := make([]string,0)
     for _, rule := range appInstance.Rules {
         // this is the service we are looking for and it is opened
@@ -368,7 +369,6 @@ func (m *Manager) getAllowedServices(appInstance *grpc_application_go.AppInstanc
                     }
                 }
             }
-            break
         }
     }
     log.Debug().Interface("grantedServices", allowedServices).Str("serviceName",serviceName).
