@@ -67,7 +67,7 @@ func (m *Manager) RegisterInboundServiceProxy(request *grpc_network_go.InboundSe
             request.ServiceGroupId, request.ServiceId, false)
         updateErr = err
         if err != nil {
-            log.Error().Err(err).Msgf("attempt %d updating routes failed")
+            log.Error().Err(err).Msgf("attempt %d updating routes failed", i)
             time.Sleep(ApplicationManagerTimeout)
         } else {
             break
