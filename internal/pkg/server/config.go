@@ -26,8 +26,8 @@ type Config struct {
 	UseTLS bool
 	// CaCertPath path for the CA
 	CaCertPath string
-	// SkipCaValidation decide whether to skip CA validation or not
-	SkipCAValidation bool
+	// SkipServerCertValidation decide whether to skip CA validation or not
+	SkipServerCertValidation bool
 }
 
 func (conf *Config) Validate() derrors.Error {
