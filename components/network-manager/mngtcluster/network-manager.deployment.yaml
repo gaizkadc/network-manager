@@ -35,6 +35,7 @@ spec:
             - "--queueAddress=broker.__NPH_NAMESPACE:6650"
             - "--debug"
             - "--caCertPath=/nalej/tls-ca-certificate/tls.crt"
+            - "--clientCertPath=/nalej/tls-client-certificate/tls.crt"
             - "--skipServerCertValidation=false"
           securityContext:
             runAsUser: 0
@@ -56,6 +57,9 @@ spec:
             - name: tls-ca-certificate-volume
               readOnly: true
               mountPath: /nalej/tls-ca-certificate
+            - name: tls-client-certificate-volume
+              readOnly: true
+              mountPath: /nalej/tls-client-certificate
       imagePullSecrets:
         - name: nalej-registry
       volumes:
@@ -77,3 +81,6 @@ spec:
         - name: tls-ca-certificate-volume
           secret:
             secretName: tls-ca-certificate
+        - name: tls-client-certificate-volume
+          secret:
+            secretName: tls-client-certificate

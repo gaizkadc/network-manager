@@ -50,6 +50,8 @@ type ConnectionsHelper struct {
     useTLS bool
     // path for the CA
     caCertPath string
+    // path for the Client cert
+    clientCertPath string
     // skip CA validation
     SkipServerCertValidation bool
 }
@@ -173,7 +175,7 @@ func(h *ConnectionsHelper) UpdateClusterConnections(organizationId string, clien
             targetPort := int(APP_CLUSTER_API_PORT)
             params := make([]interface{}, 0)
             params = append(params, h.useTLS)
-            params = append(params, h.caCertPath)
+            params = append(params, h.clientCertPath)
             params = append(params, h.SkipServerCertValidation)
 
             clusters.AddConnection(targetHostname, targetPort, params ... )

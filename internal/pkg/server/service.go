@@ -28,7 +28,7 @@ type Service struct {
 func NewService(config Config) *Service {
 	return &Service{
 		Configuration: config,
-		ConnHelper: utils.NewConnectionsHelper(config.UseTLS,config.CaCertPath,config.SkipServerCertValidation),
+		ConnHelper: utils.NewConnectionsHelper(config.UseTLS,config.CACertPath,config.SkipServerCertValidation),
 		Server: tools.NewGenericGRPCServer(uint32(config.Port)),
 	}
 }
