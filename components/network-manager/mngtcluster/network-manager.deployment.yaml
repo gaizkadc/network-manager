@@ -34,6 +34,9 @@ spec:
             - "--zturl=http://localhost:9993"
             - "--queueAddress=broker.__NPH_NAMESPACE:6650"
             - "--debug"
+            - "--caCertPath=/nalej/ca-certificate/ca.crt"
+            - "--clientCertPath=/nalej/tls-client-certificate/"
+            - "--skipServerCertValidation=false"
           securityContext:
             runAsUser: 0
           volumeMounts:
@@ -51,6 +54,12 @@ spec:
             - name: zt-identity-secret
               mountPath: /zt/identity-secret
               readOnly: true
+            - name: ca-certificate-volume
+              readOnly: true
+              mountPath: /nalej/ca-certificate
+            - name: tls-client-certificate-volume
+              readOnly: true
+              mountPath: /nalej/tls-client-certificate/
       imagePullSecrets:
         - name: nalej-registry
       volumes:
@@ -69,3 +78,9 @@ spec:
         - name: zt-identity-secret
           secret:
             secretName: zt-identity-secret
+        - name: ca-certificate-volume
+          secret:
+            secretName: ca-certificate
+        - name: tls-client-certificate-volume
+          secret:
+            secretName: tls-client-certificate

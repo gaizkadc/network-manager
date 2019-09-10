@@ -24,10 +24,12 @@ type Config struct {
 	QueueAddress string
 	// UseTLS to connect to the application cluster API
 	UseTLS bool
-	// CaCertPath path for the CA
-	CaCertPath string
-	// SkipCaValidation decide whether to skip CA validation or not
-	SkipCAValidation bool
+	// CACertPath path for the CA
+	CACertPath string
+	// ClientCertPath path for the CA
+	ClientCertPath string
+	// SkipServerCertValidation decide whether to skip CA validation or not
+	SkipServerCertValidation bool
 }
 
 func (conf *Config) Validate() derrors.Error {
@@ -49,6 +51,13 @@ func (conf *Config) Validate() derrors.Error {
 	if conf.QueueAddress == "" {
 		return derrors.NewInvalidArgumentError("Queue URL must be defined")
 	}
+	if conf.CACertPath == "" {
+		return derrors.NewInvalidArgumentError("CA Cert Path must be defined")
+	}
+	if conf.ClientCertPath == "" {
+		return derrors.NewInvalidArgumentError("Client Cert Path must be defined")
+	}
+
 	return nil
 }
 
