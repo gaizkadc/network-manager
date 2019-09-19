@@ -7,13 +7,14 @@ package application
 import (
     "context"
     "fmt"
-    "github.com/nalej/grpc-infrastructure-go"
-    "github.com/nalej/grpc-app-cluster-api-go"
-    "github.com/nalej/network-manager/internal/pkg/utils"
     "github.com/nalej/derrors"
+    "github.com/nalej/grpc-app-cluster-api-go"
     "github.com/nalej/grpc-application-go"
+    "github.com/nalej/grpc-application-network-go"
     "github.com/nalej/grpc-deployment-manager-go"
+    "github.com/nalej/grpc-infrastructure-go"
     "github.com/nalej/grpc-network-go"
+    "github.com/nalej/network-manager/internal/pkg/utils"
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
     "time"
@@ -31,13 +32,18 @@ type Manager struct {
     clusterInfrastructure grpc_infrastructure_go.ClustersClient
     // Connection helper to maintain connections with multiple deployment managers
     connHelper *utils.ConnectionsHelper
+    appNetClient grpc_application_network_go.ApplicationNetworkClient
 }
 
 func NewManager(conn *grpc.ClientConn, connHelper *utils.ConnectionsHelper) *Manager {
-    clusterInfrastructure := grpc_infrastructure_go.NewClustersClient(conn)
-    applicationClient := grpc_application_go.NewApplicationsClient(conn)
-    return &Manager{applicationClient: applicationClient, clusterInfrastructure: clusterInfrastructure,
-        connHelper: connHelper}
+    clusterInfrastructure   := grpc_infrastructure_go.NewClustersClient(conn)
+    applicationClient       := grpc_application_go.NewApplicationsClient(conn)
+    appNetClient            := grpc_application_network_go.NewApplicationNetworkClient(conn)
+    return &Manager{
+        applicationClient: applicationClient,
+        clusterInfrastructure: clusterInfrastructure,
+        connHelper: connHelper,
+        appNetClient: appNetClient}
 }
 
 func (m *Manager) RegisterInboundServiceProxy(request *grpc_network_go.InboundServiceProxy) derrors.Error {
@@ -415,3 +421,32 @@ func (m *Manager) getServicesIAccess(appInstance *grpc_application_go.AppInstanc
         Msg("this service can access...")
     return allowedServices
 }
+
+// AddConnection adds a new connection between one outbound and one inbound
+func (m *Manager) AddConnection(addRequest *grpc_application_network_go.AddConnectionRequest) error{
+
+    // TODO: ZT tasks!!
+    ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+    defer cancel()
+
+    _, err := m.appNetClient.AddConnection(ctx, addRequest)
+
+    if err != nil {
+        return  err
+    }
+    return nil
+}
+
+// RemoveConnection removes a connection
+func (m *Manager) RemoveConnection(removeRequest *grpc_application_network_go.RemoveConnectionRequest) error{
+
+    // TODO: ZT Tasks!!
+    ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+    defer cancel()
+
+    _, err := m.appNetClient.RemoveConnection(ctx, removeRequest)
+
+    if err != nil {
+        return  err
+    }
+    return nil }

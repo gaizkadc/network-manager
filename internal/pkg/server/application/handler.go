@@ -5,9 +5,10 @@
 package application
 
 import (
+    "context"
+    "github.com/nalej/grpc-application-network-go"
     "github.com/nalej/grpc-common-go"
     "github.com/nalej/grpc-network-go"
-    "context"
 )
 type Handler struct {
     Manager Manager
@@ -33,4 +34,21 @@ func (h *Handler) RegisterOutboundProxy(ctx context.Context, request *grpc_netwo
         return nil, err
     }
     return &grpc_common_go.Success{}, nil
+}
+
+// AddConnection adds a new connection between one outbound and one inbound
+func (h *Handler) AddConnection(ctx context.Context, addRequest *grpc_application_network_go.AddConnectionRequest) (*grpc_common_go.Success, error){
+    err := h.Manager.AddConnection(addRequest)
+    if err != nil {
+        return nil, err
+    }
+    return &grpc_common_go.Success{}, nil
+}
+// RemoveConnection removes a connection
+func (h *Handler) RemoveConnection(ctx context.Context, removeRequest *grpc_application_network_go.RemoveConnectionRequest) (*grpc_common_go.Success, error){
+    err := h.Manager.RemoveConnection(removeRequest)
+    if err != nil {
+        return nil, err
+    }
+        return &grpc_common_go.Success{}, nil
 }
