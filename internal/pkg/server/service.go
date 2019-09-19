@@ -83,12 +83,12 @@ func (s *Service) Launch() {
 
 	// Queue manager
 	log.Info().Str("queueURL", s.Configuration.QueueAddress).Msg("instantiate message queue")
-	pulsarclient := pulsar_comcast.NewClient(s.Configuration.QueueAddress)
+	pulsarclient := pulsar_comcast.NewClient(s.Configuration.QueueAddress, nil)
 
 	log.Info().Msg("initialize networks ops manager...")
 	networkOpsConfig := ops.NewConfigNetworksOpsConsumer(1, ops.ConsumableStructsNetworkOpsConsumer{
 		AuthorizeMember: true, DisauthorizeMember: true, AddDNSEntry: true, DeleteDNSEntry: true,
-		InboundServiceProxy: true, OutboundService: true})
+		InboundServiceProxy: true, OutboundService: true, AddConnection: true, RemoveConnection: true})
 
 	networkOpsConsumer,err := ops.NewNetworkOpsConsumer(pulsarclient, "network-manager-network-ops", true, networkOpsConfig)
 	if err!=nil{

@@ -142,3 +142,27 @@ func (n NetworkOpsHandler) consumeOutboundProxy() {
         }
     }
 }
+
+func (n NetworkOpsHandler) consumeAddConnectionRequest() {
+    log.Debug().Msg("waiting for consume add connection request...")
+    for {
+        received := <- n.consumer.Config.ChAddConnectionRequest
+        log.Debug().Interface("connection request", received).Msg("<- incoming add connection request")
+        err := n.netAppManager.AddConnection(received)
+        if err != nil {
+            log.Error().Err(err).Msg("failed processing add connection request")
+        }
+    }
+}
+
+func (n NetworkOpsHandler) consumeRemoveConnectionRequest() {
+    log.Debug().Msg("waiting for consume remove connection request...")
+    for {
+        received := <- n.consumer.Config.ChRemoveConnectionRequest
+        log.Debug().Interface("connection request", received).Msg("<- incoming remove connection request")
+        err := n.netAppManager.RemoveConnection(received)
+        if err != nil {
+            log.Error().Err(err).Msg("failed processing remove connection request")
+        }
+    }
+}
