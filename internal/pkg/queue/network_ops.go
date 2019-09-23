@@ -44,6 +44,8 @@ func(n NetworkOpsHandler) Run() {
     go n.consumeDeleteDNSEntryRequest()
     go n.consumeInboundProxy()
     go n.consumeOutboundProxy()
+    go n.consumeAddConnectionRequest()
+    go n.consumeRemoveConnectionRequest()
     go n.waitRequests()
 }
 
