@@ -17,7 +17,8 @@ const (
 	emptyFQDN           = "FQDN cannot be empty"
 	emptyMemberId       = "Member ID cannot be empty"
 	emptyAppId          = "Application instance ID cannot be empty"
-	emptyIp = "Service IP cannot be empty"
+	emptyIp 			= "Service IP cannot be empty"
+	emptyAppInstanceId  = "app_instance_id cannot be empty"
 )
 
 func ValidAddNetworkRequest(addNetworkRequest *grpc_network_go.AddNetworkRequest) derrors.Error {
@@ -99,3 +100,19 @@ func ValidDeleteServiceDNSEntryRequest(request * grpc_network_go.DeleteServiceDN
 	return nil
 }
 
+func ValidAuthorizeZTConnectionRequest (request *grpc_network_go.AuthorizeZTConnectionRequest) derrors.Error {
+	if request.OrganizationId == "" {
+		return derrors.NewInvalidArgumentError(emptyOrganizationId)
+	}
+	if request.AppInstanceId == "" {
+		return derrors.NewInvalidArgumentError(emptyAppInstanceId)
+	}
+	if request.NetworkId == "" {
+		return derrors.NewInvalidArgumentError(emptyNetworkId)
+	}
+	if request.MemberId == "" {
+		return derrors.NewInvalidArgumentError(emptyMemberId)
+	}
+
+	return nil
+}

@@ -121,3 +121,25 @@ func (h *Handler) AuthorizeMember(ctx context.Context, authorizeMemberRequest *g
 
 	return &grpc_common_go.Success{}, nil
 }
+
+// AuthorizeZTConnection A pod requests authorization to join a secondary ZT Network
+func (h *Handler) AuthorizeZTConnection(ctx context.Context, request *grpc_network_go.AuthorizeZTConnectionRequest) (*grpc_common_go.Success, error){
+	log.Debug().Str("organizationID", request.OrganizationId).
+		Str("appInstanceID", request.AppInstanceId).
+		Str("networkID", request.NetworkId).
+		Str("memberID", request.MemberId).Msg("authorize ZT Connection")
+
+	// Validation
+	vErr := entities.ValidAuthorizeZTConnectionRequest(request)
+	if vErr != nil {
+		return nil, conversions.ToGRPCError(vErr)
+	}
+
+	// Request
+	err := h.Manager.AuthorizeZTConnection(request)
+	if err != nil {
+		log.Error().Msg("unable to authorize ZT Connection")
+		return nil, conversions.ToGRPCError(err)
+	}
+	return &grpc_common_go.Success{}, nil
+}

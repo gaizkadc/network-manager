@@ -7,14 +7,18 @@ package networks
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/consul/command/operator/raft/listpeers"
 	"github.com/nalej/derrors"
 	"github.com/nalej/grpc-application-go"
+	"github.com/nalej/grpc-application-network-go"
 	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-organization-go"
+	"github.com/nalej/grpc-utils/pkg/conversions"
 	"github.com/nalej/network-manager/internal/pkg/entities"
 	"github.com/nalej/network-manager/internal/pkg/zt"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"os"
 	"time"
 )
 
@@ -26,15 +30,17 @@ const (
 // Manager structure with the remote clients required to manage networks.
 type Manager struct {
 	//NetworkProvider network.Provider
-	OrganizationClient grpc_organization_go.OrganizationsClient
-	ApplicationClient grpc_application_go.ApplicationsClient
-	ZTClient           *zt.ZTClient
+	OrganizationClient	grpc_organization_go.OrganizationsClient
+	ApplicationClient 	grpc_application_go.ApplicationsClient
+	AppNetClient      	grpc_application_network_go.ApplicationNetworkClient
+	ZTClient           	*zt.ZTClient
 }
 
 // NewManager creates a new manager.
 func NewManager(organizationConn *grpc.ClientConn, url string, accessToken string) (*Manager, error) {
 	orgClient := grpc_organization_go.NewOrganizationsClient(organizationConn)
 	appClient := grpc_application_go.NewApplicationsClient(organizationConn)
+	appnetClient := grpc_network_go.NewApplicationNetworkClient(organizationConn)
 
 	ztClient, err := zt.NewZTClient(url, accessToken)
 
@@ -45,7 +51,8 @@ func NewManager(organizationConn *grpc.ClientConn, url string, accessToken strin
 
 	return &Manager{
 		OrganizationClient: orgClient,
-		ApplicationClient: appClient,
+		ApplicationClient: 	appClient,
+		AppNetClient: 		appnetClient,
 		ZTClient:           ztClient,
 	}, nil
 }
@@ -263,6 +270,42 @@ func (m *Manager) UnauthorizeMember(unauthorizeMemberRequest *grpc_network_go.Di
 			return derrors.NewNotFoundError("impossible to unauthorize member in zt network", err)
 		}
 	}
+
+	return nil
+}
+
+func (m *Manager) AuthorizeZTConnection(request *grpc_network_go.AuthorizeZTConnectionRequest) derrors.Error{
+
+	ctx, cancel := context.WithTimeout(context.Background(), NetworkQueryTimeout)
+	defer cancel()
+	// Check if the instance is joined in this zt-network
+	list, err := m.AppNetClient.ListZTNetworkConnection(ctx, &grpc_application_network_go.ZTNetworkConnectionId{
+		OrganizationId:	request.OrganizationId,
+		ZtNetworkId: 	request.NetworkId,
+	})
+	if err != nil {
+		return conversions.ToDerror(err)
+	}
+
+	found := false
+	for _, conn := range list.Connections {
+		if conn.AppInstanceId == request.AppInstanceId {
+			found = true
+		}
+	}
+	if !found {
+		return derrors.NewNotFoundError("instance not found for this zt-network").WithParams(request.AppInstanceId)
+	}
+
+	// the instance is allowed for this ZT-network
+	// send the authorize request
+	err = m.ZTClient.Authorize(request.NetworkId, request.MemberId)
+	if err != nil {
+		return derrors.NewInternalError("Unable to authorize member", err)
+	}
+
+	log.Info().Interface("authorize", request).Msg("Authorization sent to zt-client")
+
 
 	return nil
 }
