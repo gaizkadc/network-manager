@@ -6,9 +6,11 @@ package application
 
 import (
     "context"
+    "github.com/nalej/derrors"
     "github.com/nalej/grpc-application-network-go"
     "github.com/nalej/grpc-common-go"
     "github.com/nalej/grpc-network-go"
+    "github.com/nalej/grpc-utils/pkg/conversions"
 )
 type Handler struct {
     Manager Manager
@@ -51,4 +53,9 @@ func (h *Handler) RemoveConnection(ctx context.Context, removeRequest *grpc_appl
         return nil, err
     }
         return &grpc_common_go.Success{}, nil
+}
+
+// RegisterZTConnection operation to indicate that the inbound or outbound  are within the ztNetwork
+func (h *Handler)RegisterZTConnection(ctx context.Context, in *grpc_network_go.RegisterZTConnectionRequest) (*grpc_common_go.Success, error){
+    return nil, conversions.ToGRPCError(derrors.NewUnimplementedError("not implemented yet"))
 }

@@ -46,6 +46,7 @@ func(n NetworkOpsHandler) Run() {
     go n.consumeOutboundProxy()
     go n.consumeAddConnectionRequest()
     go n.consumeRemoveConnectionRequest()
+    go n.consumeAuthorizeZTConnectionRequest()
     go n.waitRequests()
 }
 
@@ -168,3 +169,16 @@ func (n NetworkOpsHandler) consumeRemoveConnectionRequest() {
         }
     }
 }
+
+func (n NetworkOpsHandler) consumeAuthorizeZTConnectionRequest() {
+    log.Debug().Msg("waiting for consume authorize ZT connection request...")
+    for {
+        received := <- n.consumer.Config.ChAuthorizeZTConnection
+        log.Debug().Interface("connection request", received).Msg("<- incoming authorize ZT connection request")
+        err := n.netManager.AuthorizeZTConnection(received)
+        if err != nil {
+            log.Error().Err(err).Msg("failed processing authorize connection request")
+        }
+    }
+}
+

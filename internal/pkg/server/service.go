@@ -88,7 +88,8 @@ func (s *Service) Launch() {
 	log.Info().Msg("initialize networks ops manager...")
 	networkOpsConfig := ops.NewConfigNetworksOpsConsumer(1, ops.ConsumableStructsNetworkOpsConsumer{
 		AuthorizeMember: true, DisauthorizeMember: true, AddDNSEntry: true, DeleteDNSEntry: true,
-		InboundServiceProxy: true, OutboundService: true, AddConnection: true, RemoveConnection: true})
+		InboundServiceProxy: true, OutboundService: true, AddConnection: true, RemoveConnection: true,
+		AuthorizeZTConnection: true,})
 
 	networkOpsConsumer,err := ops.NewNetworkOpsConsumer(pulsarclient, "network-manager-network-ops", true, networkOpsConfig)
 	if err!=nil{
