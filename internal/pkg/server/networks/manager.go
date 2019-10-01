@@ -7,7 +7,6 @@ package networks
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/consul/command/operator/raft/listpeers"
 	"github.com/nalej/derrors"
 	"github.com/nalej/grpc-application-go"
 	"github.com/nalej/grpc-application-network-go"
@@ -18,7 +17,6 @@ import (
 	"github.com/nalej/network-manager/internal/pkg/zt"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
-	"os"
 	"time"
 )
 
@@ -40,7 +38,7 @@ type Manager struct {
 func NewManager(organizationConn *grpc.ClientConn, url string, accessToken string) (*Manager, error) {
 	orgClient := grpc_organization_go.NewOrganizationsClient(organizationConn)
 	appClient := grpc_application_go.NewApplicationsClient(organizationConn)
-	appnetClient := grpc_network_go.NewApplicationNetworkClient(organizationConn)
+	appnetClient := grpc_application_network_go.NewApplicationNetworkClient(organizationConn)
 
 	ztClient, err := zt.NewZTClient(url, accessToken)
 
