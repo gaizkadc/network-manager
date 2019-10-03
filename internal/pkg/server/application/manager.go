@@ -6,6 +6,7 @@ package application
 
 import (
     "context"
+    "errors"
     "fmt"
     "github.com/nalej/derrors"
     "github.com/nalej/grpc-app-cluster-api-go"
@@ -539,7 +540,8 @@ func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID s
         NetworkId: networkID,
     }
 
-    for i:=0; i < ApplicationManagerUpdateRetries; i++ {
+    var i int
+    for i = 0; i < ApplicationManagerUpdateRetries; i++ {
 
         client := grpc_app_cluster_api_go.NewDeploymentManagerClient(connTarget)
         ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerJoinTimeout)
@@ -547,12 +549,18 @@ func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID s
         log.Debug().Str("clusterId", clusterID).Msg("send join ztNetwork")
         _, err = client.JoinZTNetwork(ctx, ztRequest)
         if err != nil {
-            log.Error().Err(err).Msg("there was an error sending join message")
+            log.Error().Err(err).Interface("ztRequest", ztRequest).Msg("there was an error sending join message")
             time.Sleep(ApplicationManagerTimeout)
         } else {
             break
         }
     }
+    // if we can not send the message in ApplicationManagerUpdate retries -> an error must be sent
+    if i == ApplicationManagerUpdateRetries {
+        log.Error().Interface("ztRequest", ztRequest).Msg("max retries sending join message")
+        return errors.New("unable to send the join message")
+    }
+
     return nil
 }
 
