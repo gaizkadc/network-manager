@@ -23,6 +23,8 @@ import (
 const (
 	// timeout for queries about network values
 	NetworkQueryTimeout = time.Second * 10
+	ZTRangeMin = "192.168.0.1"
+	ZTRangeMax = "192.168.15.254"
 )
 
 // Manager structure with the remote clients required to manage networks.
@@ -35,17 +37,10 @@ type Manager struct {
 }
 
 // NewManager creates a new manager.
-func NewManager(organizationConn *grpc.ClientConn, url string, accessToken string) (*Manager, error) {
+func NewManager(organizationConn *grpc.ClientConn, ztClient *zt.ZTClient) (*Manager, error) {
 	orgClient := grpc_organization_go.NewOrganizationsClient(organizationConn)
 	appClient := grpc_application_go.NewApplicationsClient(organizationConn)
 	appnetClient := grpc_application_network_go.NewApplicationNetworkClient(organizationConn)
-
-	ztClient, err := zt.NewZTClient(url, accessToken)
-
-	if err != nil {
-		log.Error().Err(err).Msgf("impossible to create network for url %s", url)
-		return nil, err
-	}
 
 	return &Manager{
 		OrganizationClient: orgClient,
@@ -73,7 +68,7 @@ func (m *Manager) AddNetwork(addNetworkRequest *grpc_network_go.AddNetworkReques
 	}
 
 	// use zt client to add network
-	ztNetwork, err := m.ZTClient.Add(addNetworkRequest.Name, addNetworkRequest.OrganizationId)
+	ztNetwork, err := m.ZTClient.Add(addNetworkRequest.Name, addNetworkRequest.OrganizationId, ZTRangeMin, ZTRangeMax)
 
 	if err != nil {
 		return nil, derrors.NewGenericError("Cannot add ZeroTier network", err)

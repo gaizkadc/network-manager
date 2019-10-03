@@ -54,7 +54,7 @@ func NewZTClient(url string, accessToken string) (*ZTClient, derrors.Error) {
 //     Error, if there is an internal error.
 // The entries marked [rw] can be set during creation. From those,
 // only "name" is required.
-func (ztc *ZTClient) Add(networkName string, organizationId string) (*ZTNetwork, derrors.Error) {
+func (ztc *ZTClient) Add(networkName string, organizationId string, IpRangeMin string, IpRangeMax string ) (*ZTNetwork, derrors.Error) {
 
 	// Get Controller ZT address, as that's needed to create the proper
 	status, err := ztc.GetStatus()
@@ -79,8 +79,8 @@ func (ztc *ZTClient) Add(networkName string, organizationId string) (*ZTNetwork,
 		Name: networkName,
 		IpAssignmentPools: []IpAssignmentPool{
             {
-                IpRangeStart: "192.168.0.1",
-                IpRangeEnd: "192.168.15.254",
+                IpRangeStart: IpRangeMin, //"192.168.0.1",
+                IpRangeEnd: IpRangeMax, //"192.168.15.254",
             },
             /*
 		    {

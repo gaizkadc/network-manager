@@ -13,6 +13,7 @@ import (
 	"github.com/nalej/network-manager/internal/pkg/server/networks"
 	"github.com/nalej/network-manager/internal/pkg/server/servicedns"
 	"github.com/nalej/network-manager/internal/pkg/utils"
+	"github.com/nalej/network-manager/internal/pkg/zt"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -46,14 +47,20 @@ func (s *Service) Launch() {
 		return
 	}
 
-	// Instantiate network manager
-	netManager, err := networks.NewManager(smConn, s.Configuration.ZTUrl, s.Configuration.ZTAccessToken)
+	// Create ZTClient
+	ztClient, err := zt.NewZTClient(s.Configuration.ZTUrl, s.Configuration.ZTAccessToken)
 
+	if err != nil {
+		log.Error().Err(err).Msgf("impossible to create network for url %s", s.Configuration.ZTUrl)
+		return
+	}
+
+	// Instantiate network manager
+	netManager, err := networks.NewManager(smConn, ztClient)
 	if err != nil {
 		log.Fatal().Msg("failed creating network manager")
 		return
 	}
-
 	netHandler := networks.NewHandler(*netManager)
 
 	// Instantiate DNS manager
@@ -75,10 +82,12 @@ func (s *Service) Launch() {
 	servDNSManager := servicedns.NewManager(consulClient)
 	servDNSHandler := servicedns.NewHandler(servDNSManager)
 
-
-
 	// Service Net application
-	netAppManager := application.NewManager(smConn, s.ConnHelper)
+	netAppManager, err := application.NewManager(smConn, s.ConnHelper, ztClient)
+	if err != nil {
+		log.Fatal().Msg("failed creating netapp manager")
+		return
+	}
 	servNetAppHandler := application.NewHandler(*netAppManager)
 
 	// Queue manager
