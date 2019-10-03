@@ -475,7 +475,7 @@ func (m *Manager) getRangeIp (organizationID string, sourceId string, targetId s
     return "", "", derrors.NewInternalError("Free IP Range not found").WithParams(sourceId, targetId)
 }
 
-
+// deployedOnInfo is a struct to keep the service identifier and the cluster where it is deployed on
 type deployedOnInfo struct {
     ServiceId string
     ClusterId string
