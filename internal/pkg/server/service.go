@@ -43,7 +43,7 @@ func (s *Service) Launch() {
 
 	smConn, err := grpc.Dial(s.Configuration.SystemModelURL, grpc.WithInsecure())
 	if err != nil {
-		log.Fatal().Msgf("impossible to establish connection with %s", s.Configuration.SystemModelURL)
+		log.Fatal().Str("SystemModelURL", s.Configuration.SystemModelURL).Msg("impossible to establish connection with system-model")
 		return
 	}
 
@@ -51,7 +51,7 @@ func (s *Service) Launch() {
 	ztClient, err := zt.NewZTClient(s.Configuration.ZTUrl, s.Configuration.ZTAccessToken)
 
 	if err != nil {
-		log.Error().Err(err).Msgf("impossible to create network for url %s", s.Configuration.ZTUrl)
+		log.Error().Err(err).Str("ZTUrl", s.Configuration.ZTAccessToken).Msg("impossible to create network for url")
 		return
 	}
 

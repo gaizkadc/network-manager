@@ -6,7 +6,6 @@ package application
 
 import (
     "context"
-    "errors"
     "fmt"
     "github.com/nalej/derrors"
     "github.com/nalej/grpc-app-cluster-api-go"
@@ -31,6 +30,8 @@ const (
     // Number of retries to be done when updating routes
     ApplicationManagerUpdateRetries = 5
     ApplicationManagerJoinTimeout = time.Second * 10
+    ztInitialRange = 16
+    ztFinalRange = 255
 )
 
 type Manager struct {
@@ -465,8 +466,8 @@ func (m *Manager) getRangeIp (organizationID string, sourceId string, targetId s
         }
     }
 
-    for i:= 16; i<255; i++{
-        if ips[i] != true {
+    for i:= ztInitialRange; i<ztFinalRange; i++{
+        if ! ips[i]  {
             rangeMin := fmt.Sprintf("192.168.%d.0", i)
             rangeMax := fmt.Sprintf("192.168.%d.254", i)
             return rangeMin, rangeMax, nil
@@ -507,7 +508,7 @@ func (m *Manager) getServiceIdForInbound(instance *grpc_application_go.AppInstan
                 return m.getServiceId(instance, rule.TargetServiceName)
         }
     }
-    return []deployedOnInfo{}, derrors.NewNotFoundError("inbound not found in the instance").WithParams(inbound, instance.AppInstanceId)
+    return nil, derrors.NewNotFoundError("inbound not found in the instance").WithParams(inbound, instance.AppInstanceId)
 }
 // getServiceIdForOutbound returns the service identifier that contains the inbound and the cluster identifier where it is deployed on
 func (m *Manager) getServiceIdForOutbound(instance *grpc_application_go.AppInstance, outbound string) ([]deployedOnInfo, derrors.Error){
@@ -517,10 +518,10 @@ func (m *Manager) getServiceIdForOutbound(instance *grpc_application_go.AppInsta
             return m.getServiceId(instance, rule.TargetServiceName)
         }
     }
-    return []deployedOnInfo{}, derrors.NewNotFoundError("outbound not found in the instance").WithParams(outbound, instance.AppInstanceId)
+    return nil, derrors.NewNotFoundError("outbound not found in the instance").WithParams(outbound, instance.AppInstanceId)
 }
 
-func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID string, serviceID string, networkID string) error {
+func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID string, serviceID string, networkID string, isInbound bool) derrors.Error {
     clusterHostname, exists := m.connHelper.ClusterReference[clusterID]
     if !exists {
         return derrors.NewInternalError("impossible to get cluster address").WithParams(clusterID)
@@ -536,12 +537,12 @@ func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID s
         OrganizationId: organizationID,
         AppInstanceId: instanceID,
         ServiceId: serviceID,
-        IsInbound: true,
+        IsInbound: isInbound,
         NetworkId: networkID,
     }
 
-    var i int
-    for i = 0; i < ApplicationManagerUpdateRetries; i++ {
+    sent := false
+    for i := 0; i < ApplicationManagerUpdateRetries && !sent; i++ {
 
         client := grpc_app_cluster_api_go.NewDeploymentManagerClient(connTarget)
         ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerJoinTimeout)
@@ -552,13 +553,13 @@ func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID s
             log.Error().Err(err).Interface("ztRequest", ztRequest).Msg("there was an error sending join message")
             time.Sleep(ApplicationManagerTimeout)
         } else {
-            break
+            sent = true
         }
     }
     // if we can not send the message in ApplicationManagerUpdate retries -> an error must be sent
-    if i == ApplicationManagerUpdateRetries {
+    if !sent {
         log.Error().Interface("ztRequest", ztRequest).Msg("max retries sending join message")
-        return errors.New("unable to send the join message")
+        return derrors.NewInternalError("unable to send the join message")
     }
 
     return nil
@@ -630,7 +631,7 @@ func (m *Manager) AddConnection(addRequest *grpc_application_network_go.AddConne
 
     for _, source := range sources {
         // Source (outbound)
-        sErr := m.sendJoin(source.ClusterId, addRequest.OrganizationId, addRequest.SourceInstanceId, source.ServiceId, ztNetwork.ID)
+        sErr := m.sendJoin(source.ClusterId, addRequest.OrganizationId, addRequest.SourceInstanceId, source.ServiceId, ztNetwork.ID, false)
         if sErr != nil {
             log.Error().Str("clusterID", source.ClusterId).Str("SourceInstanceId", addRequest.SourceInstanceId).
                 Str("sourceServiceId", source.ServiceId).Str("networkId", ztNetwork.ID).
@@ -650,7 +651,7 @@ func (m *Manager) AddConnection(addRequest *grpc_application_network_go.AddConne
 
     // Target (inbound)
     for _, target := range targets {
-        sErr := m.sendJoin(target.ClusterId, addRequest.OrganizationId, addRequest.TargetInstanceId, target.ServiceId, ztNetwork.ID)
+        sErr := m.sendJoin(target.ClusterId, addRequest.OrganizationId, addRequest.TargetInstanceId, target.ServiceId, ztNetwork.ID, true)
         if sErr != nil {
             log.Error().Str("clusterID", target.ClusterId).Str("TargetInstanceId", addRequest.TargetInstanceId).
                 Str("targetServiceId", target.ServiceId).Str("networkId", ztNetwork.ID).
