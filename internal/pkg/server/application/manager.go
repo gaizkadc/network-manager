@@ -29,8 +29,8 @@ const (
     ApplicationManagerTimeout = time.Second * 3
     // Number of retries to be done when updating routes
     ApplicationManagerUpdateRetries = 5
-    ApplicationManagerJoinTimeout = time.Second * 10
-    ztInitialRange = 16
+    ApplicationManagerJoinTimeout = time.Second * 20
+    ztInitialRange = 17
     ztFinalRange = 255
 )
 
@@ -433,6 +433,7 @@ func (m *Manager) getServicesIAccess(appInstance *grpc_application_go.AppInstanc
 
 // returns the IP range that is going to be used in the new ZT network (rangeMin, rangeMax)
 func (m *Manager) getRangeIp (organizationID string, sourceId string, targetId string) (string, string, derrors.Error) {
+    log.Debug().Str("organizationID", organizationID).Str("sourceId", sourceId).Str("targetId", targetId).Msg("getRangeIp")
     // get the ipRange for the new ztNetwork
     ctxList, cancelList := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
     defer cancelList()
@@ -440,6 +441,7 @@ func (m *Manager) getRangeIp (organizationID string, sourceId string, targetId s
         OrganizationId: organizationID,
     })
     if err != nil {
+        log.Error().Err(err).Str("trace", conversions.ToDerror(err).DebugReport()).Msg("error getting connections")
         return "", "", conversions.ToDerror(err)
     }
 
@@ -468,7 +470,7 @@ func (m *Manager) getRangeIp (organizationID string, sourceId string, targetId s
 
     for i:= ztInitialRange; i<ztFinalRange; i++{
         if ! ips[i]  {
-            rangeMin := fmt.Sprintf("192.168.%d.0", i)
+            rangeMin := fmt.Sprintf("192.168.%d.1", i)
             rangeMax := fmt.Sprintf("192.168.%d.254", i)
             return rangeMin, rangeMax, nil
         }
@@ -489,7 +491,7 @@ func (m *Manager) getServiceId (instance *grpc_application_go.AppInstance, servi
     for _, group := range instance.Groups {
         for _, service := range group.ServiceInstances {
             if service.Name == serviceName {
-                servicesList = append(servicesList, deployedOnInfo{service.ServiceInstanceId, service.DeployedOnClusterId})
+                servicesList = append(servicesList, deployedOnInfo{service.ServiceId, service.DeployedOnClusterId})
             }
         }
     }
@@ -514,7 +516,7 @@ func (m *Manager) getServiceIdForInbound(instance *grpc_application_go.AppInstan
 func (m *Manager) getServiceIdForOutbound(instance *grpc_application_go.AppInstance, outbound string) ([]deployedOnInfo, derrors.Error){
     for _, rule := range instance.Rules {
         if rule.Access == grpc_application_go.PortAccess_OUTBOUND_APPNET &&
-            rule.InboundNetInterface ==outbound {
+            rule.OutboundNetInterface ==outbound {
             return m.getServiceId(instance, rule.TargetServiceName)
         }
     }
@@ -522,14 +524,20 @@ func (m *Manager) getServiceIdForOutbound(instance *grpc_application_go.AppInsta
 }
 
 func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID string, serviceID string, networkID string, isInbound bool) derrors.Error {
+    // update conn helper
+    m.connHelper.UpdateClusterConnections(organizationID, m.clusterInfrastructure)
+
     clusterHostname, exists := m.connHelper.ClusterReference[clusterID]
     if !exists {
+        log.Warn().Str("clusterID", clusterID).Msg("impossible to get cluster address")
         return derrors.NewInternalError("impossible to get cluster address").WithParams(clusterID)
     }
 
     clusterAddress := fmt.Sprintf("%s:%d", clusterHostname.Hostname, utils.APP_CLUSTER_API_PORT)
+    log.Debug().Str("clusterAddress", clusterAddress).Msg("cluster")
     connTarget, err := m.connHelper.GetAppClusterClients().GetConnection(clusterAddress)
     if err != nil {
+        log.Error().Err(err).Msg("impossible to get cluster connection")
         return derrors.NewInternalError("impossible to get cluster connection", err)
     }
 
@@ -542,8 +550,8 @@ func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID s
     }
 
     sent := false
-    for i := 0; i < ApplicationManagerUpdateRetries && !sent; i++ {
-
+    //for i := 0; i < ApplicationManagerUpdateRetries && !sent; i++ {
+    for i := 0; i < 1 && !sent; i++ {
         client := grpc_app_cluster_api_go.NewDeploymentManagerClient(connTarget)
         ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerJoinTimeout)
         defer cancel()
@@ -572,9 +580,11 @@ func (m *Manager) AddConnection(addRequest *grpc_application_network_go.AddConne
     if ipErr != nil {
         return conversions.ToGRPCError(ipErr)
     }
+    log.Debug().Str("rangeMin", rangeMin).Str("rangeMax", rangeMax).Msg("ip range retrieved")
 
     // addRequest needs IpRange
     addRequest.IpRange = fmt.Sprintf("%s-%s", rangeMin, rangeMax)
+
 
     // get the serviceId for inbound in targetInstanceId
     ctxTarget, cancelTarget:= context.WithTimeout(context.Background(), ApplicationManagerTimeout)
@@ -606,23 +616,42 @@ func (m *Manager) AddConnection(addRequest *grpc_application_network_go.AddConne
         return conversions.ToGRPCError(gErr)
     }
 
-
     // Create the connection
     ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
     defer cancel()
     conn, err := m.appNetClient.AddConnection(ctx, addRequest)
     if err != nil {
-        log.Error().Str("ConnectionId", conn.ConnectionId ).Msg("error adding connection")
+        log.Error().Str("trace", conversions.ToDerror(err).DebugReport()).Msg("error adding connection")
         return  err
     }
 
     // Create ZTNetwork
     ztNetwork, err := m.ZTClient.Add(conn.ConnectionId, addRequest.OrganizationId, rangeMin, rangeMax)
     if err != nil {
-        log.Error().Str("ConnectionId", conn.ConnectionId ).Msg("error creating ZTNetwork")
+        log.Error().Str("trace", conversions.ToDerror(err).DebugReport()).Msg("error creating ZTNetwork")
         return err
     }
     log.Info().Str("networkId", ztNetwork.ID).Str("ZtName", ztNetwork.Name).Msg("ZT network created!")
+
+
+    // Update the connection with the ztNerworkId
+    ctxUpdate, cancelUpdate := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+    defer cancelUpdate()
+    _, err = m.appNetClient.UpdateConnection(ctxUpdate, &grpc_application_network_go.UpdateConnectionRequest{
+        OrganizationId:     addRequest.OrganizationId,
+        SourceInstanceId:   addRequest.SourceInstanceId,
+        TargetInstanceId:   addRequest.TargetInstanceId,
+        InboundName:        addRequest.InboundName,
+        OutboundName:       addRequest.OutboundName,
+        UpdateZtNetworkId:  true,
+        ZtNetworkId:        ztNetwork.ID,
+        UpdateIpRange:      true,
+        IpRange:            addRequest.IpRange,
+    })
+    if err != nil {
+        log.Error().Str("trace", conversions.ToDerror(err).DebugReport()).Msg("error updating  connection instance")
+        return  err
+    }
 
     // -------------------------------------------------------------------------
     // send a message to the inbound and the outbound to join into this network
@@ -631,43 +660,76 @@ func (m *Manager) AddConnection(addRequest *grpc_application_network_go.AddConne
 
     for _, source := range sources {
         // Source (outbound)
+        log.Debug().Str("clusterID", source.ClusterId).Str("SourceInstanceId", addRequest.SourceInstanceId).
+            Str("sourceServiceId", source.ServiceId).Str("networkId", ztNetwork.ID).
+            Msg("Sending join ZT Network")
+
+        // add a register in ZTConnection table
+        // when the pod ask for authorization, the record is searched in this table
+        ctxAdd, cancelAdd := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+        defer cancelAdd()
+
+        log.Debug().Str("OrganizationID", addRequest.OrganizationId).Str("ztNetwork.ID", ztNetwork.ID).
+            Str("sourceInstanceID", addRequest.SourceInstanceId).Str("ServiceId", source.ServiceId).
+            Msg("ADD ztNetworkConnection")
+
+        _, err := m.appNetClient.AddZTNetworkConnection(ctxAdd, &grpc_application_network_go.ZTNetworkConnection{
+            OrganizationId: addRequest.OrganizationId,
+            ZtNetworkId: ztNetwork.ID,
+            AppInstanceId: addRequest.SourceInstanceId,
+            Side: grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND,
+            ServiceId: source.ServiceId,
+
+        })
+        if err != nil {
+            log.Error().Str("OrganizationID", addRequest.OrganizationId).Str("ztNetwork.ID", ztNetwork.ID).
+                Str("sourceInstanceID", addRequest.SourceInstanceId).Str("ServiceId", source.ServiceId).
+                Msg("error adding ztNetworkConnection")
+        }
+
         sErr := m.sendJoin(source.ClusterId, addRequest.OrganizationId, addRequest.SourceInstanceId, source.ServiceId, ztNetwork.ID, false)
+
         if sErr != nil {
             log.Error().Str("clusterID", source.ClusterId).Str("SourceInstanceId", addRequest.SourceInstanceId).
                 Str("sourceServiceId", source.ServiceId).Str("networkId", ztNetwork.ID).
                 Msg("error sending JoinZTNetwork")
         }
+
     }
-    // add a register in ZTConnection table
-    // when the pod ask for authorization, the record is searched in this table
-    ctxAdd, cancelAdd := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-    defer cancelAdd()
-    m.appNetClient.AddZTNetworkConnection(ctxAdd, &grpc_application_network_go.ZTNetworkConnection{
-        OrganizationId: addRequest.OrganizationId,
-        ZtNetworkId: ztNetwork.ID,
-        AppInstanceId: addRequest.SourceInstanceId,
-        Side: grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND,
-    })
+
 
     // Target (inbound)
     for _, target := range targets {
+
+        // add a register in ZTConnection table
+        // when the pod ask for authorization, the record is searched in this table
+        ctxAddT, cancelAddT := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+        defer cancelAddT()
+        log.Debug().Str("OrganizationID", addRequest.OrganizationId).Str("ztNetwork.ID", ztNetwork.ID).
+            Str("sourceInstanceID", addRequest.TargetInstanceId).Str("ServiceId", target.ServiceId).
+            Msg("ADD ztNetworkConnection")
+        _, err := m.appNetClient.AddZTNetworkConnection(ctxAddT, &grpc_application_network_go.ZTNetworkConnection{
+            OrganizationId: addRequest.OrganizationId,
+            ZtNetworkId: ztNetwork.ID,
+            AppInstanceId: addRequest.TargetInstanceId,
+            Side: grpc_application_network_go.ConnectionSide_SIDE_INBOUND,
+            ServiceId: target.ServiceId,
+        })
+        if err != nil {
+            log.Error().Str("OrganizationID", addRequest.OrganizationId).Str("ztNetwork.ID", ztNetwork.ID).
+                Str("sourceInstanceID", addRequest.TargetInstanceId).Str("ServiceId", target.ServiceId).
+                Msg("error adding ztNetworkConnection")
+        }
+
         sErr := m.sendJoin(target.ClusterId, addRequest.OrganizationId, addRequest.TargetInstanceId, target.ServiceId, ztNetwork.ID, true)
         if sErr != nil {
             log.Error().Str("clusterID", target.ClusterId).Str("TargetInstanceId", addRequest.TargetInstanceId).
                 Str("targetServiceId", target.ServiceId).Str("networkId", ztNetwork.ID).
                 Msg("error sending JoinZTNetwork")
         }
+
     }
-    // add a register in ZTConnection table
-    // when the pod ask for authorization, the record is searched in this table
-    ctxAddT, cancelAddT := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-    defer cancelAddT()
-    m.appNetClient.AddZTNetworkConnection(ctxAddT, &grpc_application_network_go.ZTNetworkConnection{
-        OrganizationId: addRequest.OrganizationId,
-        ZtNetworkId: ztNetwork.ID,
-        AppInstanceId: addRequest.TargetInstanceId,
-        Side: grpc_application_network_go.ConnectionSide_SIDE_INBOUND,
-    })
+
 
 
     return nil
@@ -676,11 +738,51 @@ func (m *Manager) AddConnection(addRequest *grpc_application_network_go.AddConne
 // RemoveConnection removes a connection
 func (m *Manager) RemoveConnection(removeRequest *grpc_application_network_go.RemoveConnectionRequest) error{
 
-    // TODO: ZT Tasks!!
+    // get the connection_instance to get zt-network and remove it
+    ctxGet, cancelGet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+    defer cancelGet()
+
+    conn, err := m.appNetClient.GetConnection(ctxGet, &grpc_application_network_go.ConnectionInstanceId{
+        OrganizationId: removeRequest.OrganizationId,
+        SourceInstanceId: removeRequest.SourceInstanceId,
+        TargetInstanceId: removeRequest.TargetInstanceId,
+        InboundName: removeRequest.InboundName,
+        OutboundName: removeRequest.OutboundName,
+    })
+    if err != nil {
+        log.Error().Err(err).Msg("error getting the connection instance")
+        return err
+    }
+
+    // Remove Zero tier network
+    if conn.ZtNetworkId != "" {
+        log.Debug().Msg("Remove zero tier network")
+        // remove ZeroTier network
+        delErr := m.ZTClient.Delete(conn.ZtNetworkId, removeRequest.OrganizationId)
+        if delErr != nil {
+            log.Error().Err(delErr).Str("organizationId", removeRequest.OrganizationId).Msg("error deleting zero tier network")
+            return conversions.ToGRPCError(delErr)
+        }
+
+        // Remove ZT-Connections
+        ctxRemove, cancelRemove := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+        defer cancelRemove()
+        _, err = m.appNetClient.RemoveZTNetworkConnection(ctxRemove, &grpc_application_network_go.ZTNetworkConnectionId{
+            OrganizationId: removeRequest.OrganizationId,
+            ZtNetworkId: conn.ZtNetworkId,
+        })
+        if err != nil {
+            log.Error().Err(delErr).Str("organizationId", removeRequest.OrganizationId).Msg("error deleting zero tier connections")
+            return err
+        }
+    }
+
+
+    // Remove Connection
     ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
     defer cancel()
 
-    _, err := m.appNetClient.RemoveConnection(ctx, removeRequest)
+    _, err = m.appNetClient.RemoveConnection(ctx, removeRequest)
 
     if err != nil {
         return  err

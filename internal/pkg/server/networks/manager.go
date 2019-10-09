@@ -8,23 +8,31 @@ import (
 	"context"
 	"fmt"
 	"github.com/nalej/derrors"
+	"github.com/nalej/grpc-app-cluster-api-go"
 	"github.com/nalej/grpc-application-go"
 	"github.com/nalej/grpc-application-network-go"
+	"github.com/nalej/grpc-deployment-manager-go"
+	"github.com/nalej/grpc-infrastructure-go"
 	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-organization-go"
 	"github.com/nalej/grpc-utils/pkg/conversions"
 	"github.com/nalej/network-manager/internal/pkg/entities"
+	"github.com/nalej/network-manager/internal/pkg/utils"
 	"github.com/nalej/network-manager/internal/pkg/zt"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"strings"
 	"time"
 )
 
 const (
 	// timeout for queries about network values
 	NetworkQueryTimeout = time.Second * 10
+	ApplicationManagerTimeout = time.Second * 3
 	ZTRangeMin = "192.168.0.1"
-	ZTRangeMax = "192.168.15.254"
+	ZTRangeMax = "192.168.0.254" // TODO: mirar que poner
+	ApplicationManagerUpdateRetries = 5
+	ApplicationManagerJoinTimeout = time.Second * 10
 )
 
 // Manager structure with the remote clients required to manage networks.
@@ -34,19 +42,26 @@ type Manager struct {
 	ApplicationClient 	grpc_application_go.ApplicationsClient
 	AppNetClient      	grpc_application_network_go.ApplicationNetworkClient
 	ZTClient           	*zt.ZTClient
+	// Connection helper to maintain connections with multiple deployment managers
+	connHelper 			*utils.ConnectionsHelper
+	// cluster infrastructure client
+	clusterInfrastructure grpc_infrastructure_go.ClustersClient
 }
 
 // NewManager creates a new manager.
-func NewManager(organizationConn *grpc.ClientConn, ztClient *zt.ZTClient) (*Manager, error) {
+func NewManager(organizationConn *grpc.ClientConn, ztClient *zt.ZTClient, helper *utils.ConnectionsHelper) (*Manager, error) {
 	orgClient := grpc_organization_go.NewOrganizationsClient(organizationConn)
 	appClient := grpc_application_go.NewApplicationsClient(organizationConn)
 	appnetClient := grpc_application_network_go.NewApplicationNetworkClient(organizationConn)
+	clusterClient   := grpc_infrastructure_go.NewClustersClient(organizationConn)
 
 	return &Manager{
 		OrganizationClient: orgClient,
 		ApplicationClient: 	appClient,
 		AppNetClient: 		appnetClient,
 		ZTClient:           ztClient,
+		connHelper: 		helper,
+		clusterInfrastructure: clusterClient,
 	}, nil
 }
 
@@ -299,6 +314,246 @@ func (m *Manager) AuthorizeZTConnection(request *grpc_network_go.AuthorizeZTConn
 
 	log.Info().Interface("authorize", request).Msg("Authorization sent to zt-client")
 
+
+	return nil
+}
+
+
+func (m *Manager) getFQDN(serviceName string, organizationId string, appInstanceId string, outboundName string) string {
+	// replace any space
+	aux := strings.Replace(strings.ToLower(serviceName), " ", "", -1)
+
+	value := fmt.Sprintf("%s-%s-%s-OUT-%s", aux, organizationId[0:10],	appInstanceId[0:10], outboundName)
+	return value
+}
+
+// send a message to update the route to the request pod (if there is an inbound with IP)
+func (m *Manager) sendUpdateRoute(request *grpc_network_go.RegisterZTConnectionRequest, inbounds []*grpc_application_network_go.ZTNetworkConnection) derrors.Error{
+
+	log.Debug().Interface("request", request).Interface("inbounds", inbounds).Msg("sendUpdateRoute")
+	// get the best inbound IP (for now,the first one)
+	var inboundReg *grpc_application_network_go.ZTNetworkConnection
+	for _, inbound := range inbounds {
+		if inbound.ZtIp != "" {
+			inboundReg = inbound
+			break
+		}
+	}
+	if inboundReg == nil {
+		log.Info().Interface("request", request).Msg("no ip found for inbound")
+		return nil
+	}
+
+	return m.sendUpdateRouteToOutbounds(&grpc_network_go.RegisterZTConnectionRequest{
+		OrganizationId: inboundReg.OrganizationId,
+		AppInstanceId: 	inboundReg.AppInstanceId,
+		ZtIp: 			inboundReg.ZtIp,
+		ClusterId: 		inboundReg.ClusterId,
+		ServiceId: 		inboundReg.ServiceId,
+		IsInbound: 		true,
+	}, []*grpc_application_network_go.ZTNetworkConnection{
+		{
+			OrganizationId: request.OrganizationId,
+			ZtNetworkId: request.NetworkId,
+			AppInstanceId: request.AppInstanceId,
+			ServiceId: request.ServiceId,
+			ZtMember: request.MemberId,
+			ZtIp: request.ZtIp,
+			ClusterId: request.ClusterId,
+			Side: grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND,
+		},
+	})
+
+}
+
+func (m *Manager) getServiceName(request *grpc_network_go.RegisterZTConnectionRequest) (string, derrors.Error){
+	ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+	defer cancel()
+	instance, err := m.ApplicationClient.GetAppInstance(ctx, &grpc_application_go.AppInstanceId{
+		OrganizationId:	request.OrganizationId,
+		AppInstanceId: 	request.AppInstanceId,
+	})
+	if err != nil {
+		return "", conversions.ToDerror(err)
+	}
+	// TODO: zt-nalej should send the ServiceGroupID
+	serviceName := ""
+	for _, group := range instance.Groups{
+		for _, service := range group.ServiceInstances {
+			if service.ServiceId == request.ServiceId{
+				serviceName = service.Name
+			}
+		}
+	}
+	if serviceName == "" {
+		log.Warn().Interface("request",request).Msg("ServiceName not found for inbound service")
+		return "", derrors.NewNotFoundError("ServiceName not found for inbound service").WithParams(request.ServiceId)
+	}
+	return serviceName, nil
+}
+
+func (m *Manager) getServiceGroupId(organizationID string, applicationId string, serviceID string) (string, derrors.Error){
+	ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+	defer cancel()
+	instance, err := m.ApplicationClient.GetAppInstance(ctx, &grpc_application_go.AppInstanceId{
+		OrganizationId:	organizationID,
+		AppInstanceId: 	applicationId,
+	})
+	if err != nil {
+		return "", conversions.ToDerror(err)
+	}
+	serviceGroupId := ""
+	for _, group := range instance.Groups{
+		for _, service := range group.ServiceInstances {
+			if service.ServiceId == serviceID{
+				serviceGroupId = group.ServiceGroupId
+			}
+		}
+	}
+	if serviceGroupId == "" {
+		log.Warn().Str("appInstanceId",applicationId).Str("serviceId", serviceID).Msg("serviceGroupId not found for inbound service")
+		return "", derrors.NewNotFoundError("serviceGroupId not found for inbound service").WithParams(applicationId, serviceID)
+	}
+	return serviceGroupId, nil
+
+}
+
+// send a message to update the route to all outbound pod if the pod is registered (has IP)
+func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZTConnectionRequest, outbounds []*grpc_application_network_go.ZTNetworkConnection) derrors.Error{
+
+	log.Debug().Interface("request", request).Interface("outbounds", outbounds).Msg("sendUpdateRouteToOutbounds")
+
+	// to update the route, we need:
+	// 1) vsa
+	//
+	serviceName, nErr := m.getServiceName(request)
+	if nErr != nil {
+		return nErr
+	}
+
+	// Get available VSA
+	ctx2, cancel2 := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+	defer cancel2()
+	net, err := m.ApplicationClient.GetAppZtNetwork(ctx2, &grpc_application_go.GetAppZtNetworkRequest{
+		OrganizationId: request.OrganizationId, AppInstanceId: request.AppInstanceId})
+
+	if err != nil {
+		return derrors.NewInternalError("impossible to retrieve network data", err)
+	}
+
+	for _, outbound := range outbounds {
+
+		fqdn := m.getFQDN(serviceName, request.OrganizationId, request.AppInstanceId)
+		virtualIP, found := net.VsaList[fqdn]
+		if !found {
+			log.Warn().Interface("vsa",net.VsaList).Str("fqdn", fqdn).Msg("unknown VSA for FQDN ")
+		}
+		log.Debug().Str("virtualIP", virtualIP).Str("fqdn", fqdn).Msg("getting virtualIP")
+
+		if outbound.ZtIp != "" && outbound.ClusterId != "" {
+			// 1) serviceGroupId
+			serviceGroupId, nErr  := m.getServiceGroupId(outbound.OrganizationId, outbound.AppInstanceId, outbound.ServiceId)
+			if nErr != nil {
+				log.Warn().Interface("request",request).Msg("serviceGroupId not found for inbound service")
+			}else {
+
+				// get the ip for the VSA
+				newRoute := grpc_deployment_manager_go.ServiceRoute{
+					Vsa:            virtualIP,
+					OrganizationId: outbound.OrganizationId,
+					AppInstanceId:  outbound.AppInstanceId,
+					ServiceId:      outbound.ServiceId,
+					ServiceGroupId: serviceGroupId,
+					RedirectToVpn:  request.ZtIp,
+					Drop:           false,
+				}
+				// and the client
+				targetCluster, found := m.connHelper.ClusterReference[outbound.ClusterId]
+				if !found {
+					return derrors.NewNotFoundError(fmt.Sprintf("impossible to find connection to cluster %s", outbound.ClusterId))
+				}
+				clusterAddress := fmt.Sprintf("%s:%d", targetCluster.Hostname, utils.APP_CLUSTER_API_PORT)
+				conn, err := m.connHelper.GetAppClusterClients().GetConnection(clusterAddress)
+				if err != nil {
+					return derrors.NewInternalError("impossible to get cluster connection", err)
+				}
+
+				client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
+				ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+				defer cancel()
+				log.Debug().Str("clusterId", outbound.ClusterId).Interface("request", newRoute).Msg("set route update")
+				_, err = client.SetServiceRoute(ctx, &newRoute)
+				if err != nil {
+					log.Error().Err(err).Msg("there was an error setting a new route")
+					return derrors.NewInternalError("there was an error setting a new route",err)
+				}
+			}
+
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnectionRequest) derrors.Error {
+
+	// update conn helper
+	m.connHelper.UpdateClusterConnections(request.OrganizationId, m.clusterInfrastructure)
+
+	/* OrganizationId, AppInstanceId, ZtIp, NetworkId, MemberId, IsInbound, ClusterID, serviceID*/
+	ctxList, cancelList := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+	defer cancelList()
+	// list contains the inbound and the outbound appInstanceId
+	// get all the services involved in this connection
+	list, err := m.AppNetClient.ListZTNetworkConnection(ctxList, &grpc_application_network_go.ZTNetworkConnectionId{
+		OrganizationId: request.OrganizationId,
+		ZtNetworkId: request.NetworkId,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("error getting zt-networkConnection")
+		return conversions.ToDerror(err)
+	}
+
+	outboundList := make([]*grpc_application_network_go.ZTNetworkConnection, 0)
+	inboundList := make([]*grpc_application_network_go.ZTNetworkConnection, 0)
+
+	for _, conn := range list.Connections {
+		if conn.Side == grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND{
+			outboundList = append(outboundList, conn)
+		}else{
+			inboundList = append(inboundList, conn)
+		}
+	}
+
+	log.Debug().Msg("update zt-networkConnection")
+	ctxUpdate, cancelUpdate := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+	defer cancelUpdate()
+
+	_, err = m.AppNetClient.UpdateZTNetworkConnection(ctxUpdate, &grpc_application_network_go.UpdateZTNetworkConnectionRequest{
+		OrganizationId: request.OrganizationId,
+		ZtNetworkId: 	request.NetworkId,
+		AppInstanceId: 	request.AppInstanceId,
+		ServiceId: 		request.ServiceId,
+		ZtMember: 		request.MemberId,
+		UpdateZtIp: 	true,
+		ZtIp: 			request.ZtIp,
+		UpdateClusterId: true,
+		ClusterId: 		request.ClusterId,
+
+	})
+	if err != nil {
+		log.Error().Err(err).Interface("request", request).Msg("error updating ztIp in the inbound")
+	}
+
+	if request.IsInbound{
+
+		// send to all the outbound pods a message to add the new route
+		return m.sendUpdateRouteToOutbounds(request, outboundList)
+
+	}else{
+		// if the inbound IP is stored -> send a route to add this IP itself
+		return m.sendUpdateRoute(request, inboundList)
+	}
 
 	return nil
 }

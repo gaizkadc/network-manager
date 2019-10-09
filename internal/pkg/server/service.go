@@ -56,7 +56,7 @@ func (s *Service) Launch() {
 	}
 
 	// Instantiate network manager
-	netManager, err := networks.NewManager(smConn, ztClient)
+	netManager, err := networks.NewManager(smConn, ztClient, s.ConnHelper)
 	if err != nil {
 		log.Fatal().Msg("failed creating network manager")
 		return
@@ -98,7 +98,7 @@ func (s *Service) Launch() {
 	networkOpsConfig := ops.NewConfigNetworksOpsConsumer(1, ops.ConsumableStructsNetworkOpsConsumer{
 		AuthorizeMember: true, DisauthorizeMember: true, AddDNSEntry: true, DeleteDNSEntry: true,
 		InboundServiceProxy: true, OutboundService: true, AddConnection: true, RemoveConnection: true,
-		AuthorizeZTConnection: true,})
+		AuthorizeZTConnection: true, RegisterZTConnecion: true})
 
 	networkOpsConsumer,err := ops.NewNetworkOpsConsumer(pulsarclient, "network-manager-network-ops", true, networkOpsConfig)
 	if err!=nil{
