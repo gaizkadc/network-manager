@@ -10,6 +10,7 @@ import (
 	"github.com/nalej/dhttp"
 	"github.com/nalej/network-manager/internal/pkg/entities"
 	"github.com/rs/zerolog/log"
+	"strings"
 )
 
 // Constants
@@ -56,6 +57,10 @@ func NewZTClient(url string, accessToken string) (*ZTClient, derrors.Error) {
 // only "name" is required.
 func (ztc *ZTClient) Add(networkName string, organizationId string, IpRangeMin string, IpRangeMax string ) (*ZTNetwork, derrors.Error) {
 
+	ip := strings.Split(IpRangeMin, ".")
+	log.Debug().Str("networkName", networkName).Str("organizationID", organizationId).
+		Str("rangeMin", IpRangeMin).Str("rangeMax", IpRangeMax).Msg("Adding network")
+
 	// Get Controller ZT address, as that's needed to create the proper
 	status, err := ztc.GetStatus()
 
@@ -100,7 +105,8 @@ func (ztc *ZTClient) Add(networkName string, organizationId string, IpRangeMin s
 		},
         */
 		Routes: []Route{
-		    {Target: "192.168.0.0/20"},
+		    {Target: fmt.Sprintf("192.168.%s.0/24", ip[2]),
+			},
         },
 	}
 
