@@ -30,7 +30,7 @@ const (
     // Number of retries to be done when updating routes
     ApplicationManagerUpdateRetries = 5
     ApplicationManagerJoinTimeout = time.Second * 20
-    ztInitialRange = 17
+    ztInitialRange = 3
     ztFinalRange = 255
 )
 
@@ -534,7 +534,6 @@ func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID s
     }
 
     clusterAddress := fmt.Sprintf("%s:%d", clusterHostname.Hostname, utils.APP_CLUSTER_API_PORT)
-    log.Debug().Str("clusterAddress", clusterAddress).Msg("cluster")
     connTarget, err := m.connHelper.GetAppClusterClients().GetConnection(clusterAddress)
     if err != nil {
         log.Error().Err(err).Msg("impossible to get cluster connection")
@@ -550,8 +549,7 @@ func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID s
     }
 
     sent := false
-    //for i := 0; i < ApplicationManagerUpdateRetries && !sent; i++ {
-    for i := 0; i < 1 && !sent; i++ {
+    for i := 0; i < ApplicationManagerUpdateRetries && !sent; i++ {
         client := grpc_app_cluster_api_go.NewDeploymentManagerClient(connTarget)
         ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerJoinTimeout)
         defer cancel()
@@ -580,11 +578,8 @@ func (m *Manager) AddConnection(addRequest *grpc_application_network_go.AddConne
     if ipErr != nil {
         return conversions.ToGRPCError(ipErr)
     }
-    log.Debug().Str("rangeMin", rangeMin).Str("rangeMax", rangeMax).Msg("ip range retrieved")
-
     // addRequest needs IpRange
     addRequest.IpRange = fmt.Sprintf("%s-%s", rangeMin, rangeMax)
-
 
     // get the serviceId for inbound in targetInstanceId
     ctxTarget, cancelTarget:= context.WithTimeout(context.Background(), ApplicationManagerTimeout)

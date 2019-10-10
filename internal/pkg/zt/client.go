@@ -106,7 +106,6 @@ func (ztc *ZTClient) Add(networkName string, organizationId string, IpRangeMin s
         */
 		Routes: []Route{
 		    {Target: fmt.Sprintf("192.168.%s.0/24", ip[2]),
-		    	//"192.168.0.0/24",
 			},
         },
 	}

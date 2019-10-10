@@ -30,7 +30,7 @@ const (
 	NetworkQueryTimeout = time.Second * 10
 	ApplicationManagerTimeout = time.Second * 3
 	ZTRangeMin = "192.168.0.1"
-	ZTRangeMax = "192.168.0.254" // TODO: mirar que poner
+	ZTRangeMax = "192.168.0.254"
 	ApplicationManagerUpdateRetries = 5
 	ApplicationManagerJoinTimeout = time.Second * 10
 )
