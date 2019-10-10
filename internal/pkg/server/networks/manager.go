@@ -366,12 +366,13 @@ func (m *Manager) sendUpdateRoute(request *grpc_network_go.RegisterZTConnectionR
 
 }
 
-func (m *Manager) getServiceName(request *grpc_network_go.RegisterZTConnectionRequest) (string, derrors.Error){
+func (m *Manager) getServiceName (organizationId string, appInstanceId string, serviceId string) (string, derrors.Error){
+// (request *grpc_network_go.RegisterZTConnectionRequest) (string, derrors.Error){
 	ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
 	defer cancel()
 	instance, err := m.ApplicationClient.GetAppInstance(ctx, &grpc_application_go.AppInstanceId{
-		OrganizationId:	request.OrganizationId,
-		AppInstanceId: 	request.AppInstanceId,
+		OrganizationId: organizationId, //	request.OrganizationId,
+		AppInstanceId:  appInstanceId,//	request.AppInstanceId,
 	})
 	if err != nil {
 		return "", conversions.ToDerror(err)
@@ -380,14 +381,14 @@ func (m *Manager) getServiceName(request *grpc_network_go.RegisterZTConnectionRe
 	serviceName := ""
 	for _, group := range instance.Groups{
 		for _, service := range group.ServiceInstances {
-			if service.ServiceId == request.ServiceId{
+			if service.ServiceId == serviceId {//request.ServiceId{
 				serviceName = service.Name
 			}
 		}
 	}
 	if serviceName == "" {
-		log.Warn().Interface("request",request).Msg("ServiceName not found for inbound service")
-		return "", derrors.NewNotFoundError("ServiceName not found for inbound service").WithParams(request.ServiceId)
+		//log.Warn().Interface("request",request).Msg("ServiceName not found for inbound service")
+		return "", derrors.NewNotFoundError("ServiceName not found for inbound service").WithParams(serviceId)
 	}
 	return serviceName, nil
 }
@@ -423,10 +424,16 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 
 	log.Debug().Interface("request", request).Interface("outbounds", outbounds).Msg("sendUpdateRouteToOutbounds")
 
+	if len(outbounds) == 0{
+		// no routes to update, nothing to send
+		return nil
+	}
+
 	// to update the route, we need:
 	// 1) vsa
 	//
-	serviceName, nErr := m.getServiceName(request)
+	//serviceName, nErr := m.getServiceName(request)
+	serviceName, nErr := m.getServiceName(outbounds[0].OrganizationId,outbounds[0].AppInstanceId, outbounds[0].ServiceId )
 	if nErr != nil {
 		return nErr
 	}
@@ -435,20 +442,34 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 	ctx2, cancel2 := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
 	defer cancel2()
 	net, err := m.ApplicationClient.GetAppZtNetwork(ctx2, &grpc_application_go.GetAppZtNetworkRequest{
-		OrganizationId: request.OrganizationId, AppInstanceId: request.AppInstanceId})
+		OrganizationId: outbounds[0].OrganizationId, AppInstanceId: outbounds[0].AppInstanceId})
 
 	if err != nil {
 		return derrors.NewInternalError("impossible to retrieve network data", err)
 	}
 
-	for _, outbound := range outbounds {
+	// Get connection to get the outbound name
+	ctx3, cancel3 := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+	defer cancel3()
+	conn, err := m.AppNetClient.GetConnectionByZtNetworkId(ctx3, &grpc_application_network_go.ZTNetworkConnectionId {
+		OrganizationId: outbounds[0].OrganizationId, //request.OrganizationId,
+		ZtNetworkId:    outbounds[0].ZtNetworkId, //request.NetworkId,
+	})
 
-		fqdn := m.getFQDN(serviceName, request.OrganizationId, request.AppInstanceId)
-		virtualIP, found := net.VsaList[fqdn]
-		if !found {
-			log.Warn().Interface("vsa",net.VsaList).Str("fqdn", fqdn).Msg("unknown VSA for FQDN ")
-		}
-		log.Debug().Str("virtualIP", virtualIP).Str("fqdn", fqdn).Msg("getting virtualIP")
+	if err != nil {
+		return derrors.NewInternalError("impossible to retrieve connetion instance ", err)
+	}
+	log.Debug().Interface("conn", conn).Msg("connection ")
+
+	//fqdn := m.getFQDN(serviceName, request.OrganizationId, request.AppInstanceId, conn.OutboundName)
+	fqdn := m.getFQDN(serviceName, outbounds[0].OrganizationId, outbounds[0].AppInstanceId, conn.OutboundName)
+	virtualIP, found := net.VsaList[fqdn]
+	if !found {
+		log.Warn().Interface("vsa",net.VsaList).Str("fqdn", fqdn).Msg("unknown VSA for FQDN ")
+	}
+	log.Debug().Str("virtualIP", virtualIP).Str("fqdn", fqdn).Msg("getting virtualIP")
+
+	for _, outbound := range outbounds {
 
 		if outbound.ZtIp != "" && outbound.ClusterId != "" {
 			// 1) serviceGroupId
