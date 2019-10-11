@@ -47,6 +47,7 @@ func(n NetworkOpsHandler) Run() {
     go n.consumeAddConnectionRequest()
     go n.consumeRemoveConnectionRequest()
     go n.consumeAuthorizeZTConnectionRequest()
+    go n.consumeRegisterZTConnectionRequest()
     go n.waitRequests()
 }
 
@@ -182,3 +183,14 @@ func (n NetworkOpsHandler) consumeAuthorizeZTConnectionRequest() {
     }
 }
 
+func (n NetworkOpsHandler) consumeRegisterZTConnectionRequest(){
+    log.Debug().Msg("waiting for consume register ZT connection request...")
+    for {
+        received := <- n.consumer.Config.ChRegisterZTConnection
+        log.Debug().Interface("connection request", received).Msg("<- incoming register ZT connection request")
+        err := n.netManager.RegisterZTConnection(received)
+        if err != nil {
+            log.Error().Err(err).Msg("failed processing register connection request")
+        }
+    }
+}
