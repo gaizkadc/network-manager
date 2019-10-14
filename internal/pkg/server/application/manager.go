@@ -571,6 +571,54 @@ func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID s
     return nil
 }
 
+func (m *Manager) sendLeave(organizationID string, clusterID string, instanceID string, serviceID string, isInbound bool, ztNetworkId string) derrors.Error {
+    // update conn helper
+    m.connHelper.UpdateClusterConnections(organizationID, m.clusterInfrastructure)
+
+    clusterHostname, exists := m.connHelper.ClusterReference[clusterID]
+    if !exists {
+        log.Warn().Str("clusterID", clusterID).Msg("impossible to get cluster address")
+        return derrors.NewInternalError("impossible to get cluster address").WithParams(clusterID)
+    }
+
+    clusterAddress := fmt.Sprintf("%s:%d", clusterHostname.Hostname, utils.APP_CLUSTER_API_PORT)
+    connTarget, err := m.connHelper.GetAppClusterClients().GetConnection(clusterAddress)
+    if err != nil {
+        log.Error().Err(err).Msg("impossible to get cluster connection")
+        return derrors.NewInternalError("impossible to get cluster connection", err)
+    }
+
+    ztRequest := &grpc_deployment_manager_go.LeaveZTNetworkRequest{
+        OrganizationId: organizationID,
+        AppInstanceId: instanceID,
+        ServiceId: serviceID,
+        IsInbound: isInbound,
+        NetworkId: ztNetworkId,
+    }
+
+    sent := false
+    for i := 0; i < ApplicationManagerUpdateRetries && !sent; i++ {
+        client := grpc_app_cluster_api_go.NewDeploymentManagerClient(connTarget)
+        ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerJoinTimeout)
+        defer cancel()
+        log.Debug().Str("clusterId", clusterID).Msg("send leave ztNetwork")
+        _, err = client.LeaveZTNetwork(ctx, ztRequest)
+        if err != nil {
+            log.Error().Err(err).Interface("ztRequest", ztRequest).Msg("there was an error sending leave message")
+            time.Sleep(ApplicationManagerTimeout)
+        } else {
+            sent = true
+        }
+    }
+    // if we can not send the message in ApplicationManagerUpdate retries -> an error must be sent
+    if !sent {
+        log.Error().Interface("ztRequest", ztRequest).Msg("max retries sending leave message")
+        return derrors.NewInternalError("unable to send the leave message")
+    }
+
+    return nil
+}
+
 // AddConnection adds a new connection between one outbound and one inbound
 func (m *Manager) AddConnection(addRequest *grpc_application_network_go.AddConnectionRequest) error{
 
@@ -759,6 +807,29 @@ func (m *Manager) RemoveConnection(removeRequest *grpc_application_network_go.Re
             return conversions.ToGRPCError(delErr)
         }
 
+        // send a message to zt-nalej (through deployment-manager) to leave the network
+        ctxList, cancelList := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+        defer cancelList()
+        ztConn, err := m.appNetClient.ListZTNetworkConnection(ctxList, &grpc_application_network_go.ZTNetworkConnectionId{
+            OrganizationId: removeRequest.OrganizationId,
+            ZtNetworkId:    conn.ZtNetworkId,
+        })
+        if err != nil {
+            log.Error().Err(err).Str("organizationId", removeRequest.OrganizationId).Str("ZtNetworkId",  conn.ZtNetworkId).
+                Msg("error getting zero tier connections")
+        }
+        for _, ztConn := range ztConn.Connections{
+            isInbound := true
+            if ztConn.Side == grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND {
+                isInbound = false
+            }
+            sendErr := m.sendLeave(removeRequest.OrganizationId, ztConn.ClusterId, ztConn.AppInstanceId, ztConn.ServiceId, isInbound, ztConn.ZtNetworkId)
+            if sendErr != nil {
+                log.Error().Err(sendErr).Str("ClusterId", ztConn.ClusterId).Str("AppInstanceId", ztConn.AppInstanceId).
+                    Str("ServiceId", ztConn.ServiceId).Msg("error sending leave ztConnection")
+            }
+        }
+
         // Remove ZT-Connections
         ctxRemove, cancelRemove := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
         defer cancelRemove()
@@ -767,11 +838,11 @@ func (m *Manager) RemoveConnection(removeRequest *grpc_application_network_go.Re
             ZtNetworkId: conn.ZtNetworkId,
         })
         if err != nil {
-            log.Error().Err(delErr).Str("organizationId", removeRequest.OrganizationId).Msg("error deleting zero tier connections")
+            log.Error().Err(delErr).Str("organizationId", removeRequest.OrganizationId).Str("ztNetworkId", conn.ZtNetworkId).
+                Msg("error deleting zero tier connections")
             return err
         }
     }
-
 
     // Remove Connection
     ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
