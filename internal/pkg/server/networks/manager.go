@@ -519,7 +519,7 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnectionRequest) derrors.Error {
 
 	// update conn helper
-	m.connHelper.UpdateClusterConnections(request.OrganizationId, m.clusterInfrastructure)
+	_ = m.connHelper.UpdateClusterConnections(request.OrganizationId, m.clusterInfrastructure)
 
 	/* OrganizationId, AppInstanceId, ZtIp, NetworkId, MemberId, IsInbound, ClusterID, serviceID*/
 	ctxList, cancelList := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
@@ -533,17 +533,6 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 	if err != nil {
 		log.Error().Err(err).Msg("error getting zt-networkConnection")
 		return conversions.ToDerror(err)
-	}
-
-	outboundList := make([]*grpc_application_network_go.ZTNetworkConnection, 0)
-	inboundList := make([]*grpc_application_network_go.ZTNetworkConnection, 0)
-
-	for _, conn := range list.Connections {
-		if conn.Side == grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND{
-			outboundList = append(outboundList, conn)
-		}else{
-			inboundList = append(inboundList, conn)
-		}
 	}
 
 	log.Debug().Msg("update zt-networkConnection")
@@ -566,15 +555,52 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 		log.Error().Err(err).Interface("request", request).Msg("error updating ztIp in the inbound")
 	}
 
-	if request.IsInbound{
+	outboundList := make([]*grpc_application_network_go.ZTNetworkConnection, 0)
+	inboundList := make([]*grpc_application_network_go.ZTNetworkConnection, 0)
 
-		// send to all the outbound pods a message to add the new route
-		return m.sendUpdateRouteToOutbounds(request, outboundList)
-
-	}else{
-		// if the inbound IP is stored -> send a route to add this IP itself
-		return m.sendUpdateRoute(request, inboundList)
+	for _, conn := range list.Connections {
+		if conn.Side == grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND{
+			outboundList = append(outboundList, conn)
+		}else{
+			inboundList = append(inboundList, conn)
+		}
+		ctxAppnet, cancelAppnet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+		ztNetworkId := grpc_application_network_go.ZTNetworkConnectionId{
+			OrganizationId: request.OrganizationId,
+			ZtNetworkId:    conn.ZtNetworkId,
+		}
+		connectionInstance, err := m.AppNetClient.GetConnectionByZtNetworkId(ctxAppnet, &ztNetworkId)
+		if err != nil {
+			log.Error().Err(err).Interface("ztNetworkId", ztNetworkId).Msg("could not get the connectionInstance using ztNetworkId. Unable to update connection status.")
+			continue
+		}
+		updateConnectionRequest := grpc_application_network_go.UpdateConnectionRequest{
+			OrganizationId:   connectionInstance.OrganizationId,
+			SourceInstanceId: connectionInstance.SourceInstanceId,
+			TargetInstanceId: connectionInstance.TargetInstanceId,
+			InboundName:      connectionInstance.InboundName,
+			OutboundName:     connectionInstance.OutboundName,
+			UpdateStatus:     true,
+			Status:           grpc_application_network_go.ConnectionStatus_ESTABLISHED,
+		}
+		log.Debug().Interface("updateCopnnectionRequest", updateConnectionRequest).Msg("---MarcosG--- BEFORE send update connection request")
+		_, err = m.AppNetClient.UpdateConnection(ctxAppnet, &updateConnectionRequest)
+		log.Debug().Interface("updateCopnnectionRequest", updateConnectionRequest).Msg("---MarcosG--- AFTER send update connection request")
+		if err != nil {
+			log.Error().Err(err).
+				Interface("connectionInstance", connectionInstance).
+				Interface("updateConnectionRequest", updateConnectionRequest).
+				Msg("error when updating connectionInstance. Unable to update connection status.")
+		}
+		cancelAppnet()
 	}
 
-	return nil
+
+	if request.IsInbound {
+		// send to all the outbound pods a message to add the new route
+		return m.sendUpdateRouteToOutbounds(request, outboundList)
+	}
+
+	// if the inbound IP is stored -> send a route to add this IP itself
+	return m.sendUpdateRoute(request, inboundList)
 }
