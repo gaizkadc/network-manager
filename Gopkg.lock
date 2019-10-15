@@ -550,6 +550,7 @@
     "github.com/nalej/grpc-application-go",
     "github.com/nalej/grpc-application-network-go",
     "github.com/nalej/grpc-common-go",
+    "github.com/nalej/grpc-connectivity-manager-go",
     "github.com/nalej/grpc-deployment-manager-go",
     "github.com/nalej/grpc-infrastructure-go",
     "github.com/nalej/grpc-network-go",
