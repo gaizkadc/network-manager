@@ -588,6 +588,7 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 				ZtNetworkId:    conn.ZtNetworkId,
 			}
 			connectionInstance, err := m.AppNetClient.GetConnectionByZtNetworkId(ctxAppnet, &ztNetworkId)
+			cancelAppnet()
 			if err != nil {
 				log.Error().Err(err).Interface("ztNetworkId", ztNetworkId).Msg("could not get the connectionInstance using ztNetworkId. Unable to update connection status.")
 				continue
@@ -604,14 +605,15 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 			if sendUpdateRouteErr != nil {
 				updateConnectionRequest.Status = grpc_application_network_go.ConnectionStatus_FAILED
 			}
+			ctxAppnet, cancelAppnet = context.WithTimeout(context.Background(), ApplicationManagerTimeout)
 			_, err = m.AppNetClient.UpdateConnection(ctxAppnet, &updateConnectionRequest)
+			cancelAppnet()
 			if err != nil {
 				log.Error().Err(err).
 					Interface("connectionInstance", connectionInstance).
 					Interface("updateConnectionRequest", updateConnectionRequest).
 					Msg("error when updating connectionInstance. Unable to update connection status.")
 			}
-			cancelAppnet()
 		}
 	}
 
