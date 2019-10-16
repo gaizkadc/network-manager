@@ -206,11 +206,6 @@ func(h *ConnectionsHelper) UpdateClusterConnections(organizationId string, clien
 // Internal function to check if a cluster meets all the conditions to be added to the list of available clusters.
 func (h * ConnectionsHelper) isClusterAvailable(cluster *grpc_infrastructure_go.Cluster) bool {
     // TODO: when state is implemented, check this ->
-    //if cluster.State != pbInfrastructure.InfraStatus_RUNNING {
-    //    log.Debug().Str("clusterID", cluster.ClusterId).Msg("cluster ignored because it is not running")
-    //    return false
-    //}
-
     if cluster.ClusterStatus != grpc_connectivity_manager_go.ClusterStatus_ONLINE {
         log.Debug().Str("clusterID", cluster.ClusterId).Msg("cluster ignored because it is not available")
         return false
