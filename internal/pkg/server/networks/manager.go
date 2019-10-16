@@ -524,22 +524,12 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 	/* OrganizationId, AppInstanceId, ZtIp, NetworkId, MemberId, IsInbound, ClusterID, serviceID*/
 	ctxList, cancelList := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
 	defer cancelList()
-	// list contains the inbound and the outbound appInstanceId
-	// get all the services involved in this connection
-	list, err := m.AppNetClient.ListZTNetworkConnection(ctxList, &grpc_application_network_go.ZTNetworkConnectionId{
-		OrganizationId: request.OrganizationId,
-		ZtNetworkId: request.NetworkId,
-	})
-	if err != nil {
-		log.Error().Err(err).Msg("error getting zt-networkConnection")
-		return conversions.ToDerror(err)
-	}
 
 	log.Debug().Msg("update zt-networkConnection")
 	ctxUpdate, cancelUpdate := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
 	defer cancelUpdate()
 
-	_, err = m.AppNetClient.UpdateZTNetworkConnection(ctxUpdate, &grpc_application_network_go.UpdateZTNetworkConnectionRequest{
+	_, err := m.AppNetClient.UpdateZTNetworkConnection(ctxUpdate, &grpc_application_network_go.UpdateZTNetworkConnectionRequest{
 		OrganizationId: request.OrganizationId,
 		ZtNetworkId: 	request.NetworkId,
 		AppInstanceId: 	request.AppInstanceId,
@@ -555,8 +545,20 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 		log.Error().Err(err).Interface("request", request).Msg("error updating ztIp in the inbound")
 	}
 
+	// list contains the inbound and the outbound appInstanceId
+	// get all the services involved in this connection
+	list, err := m.AppNetClient.ListZTNetworkConnection(ctxList, &grpc_application_network_go.ZTNetworkConnectionId{
+		OrganizationId: request.OrganizationId,
+		ZtNetworkId: request.NetworkId,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("error getting zt-networkConnection")
+		return conversions.ToDerror(err)
+	}
 	outboundList := make([]*grpc_application_network_go.ZTNetworkConnection, 0)
 	inboundList := make([]*grpc_application_network_go.ZTNetworkConnection, 0)
+
+	allConnected := true
 
 	for _, conn := range list.Connections {
 		if conn.Side == grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND{
@@ -564,35 +566,9 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 		}else{
 			inboundList = append(inboundList, conn)
 		}
-		ctxAppnet, cancelAppnet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-		ztNetworkId := grpc_application_network_go.ZTNetworkConnectionId{
-			OrganizationId: request.OrganizationId,
-			ZtNetworkId:    conn.ZtNetworkId,
+		if conn.ZtIp == "" {
+			allConnected = false
 		}
-		connectionInstance, err := m.AppNetClient.GetConnectionByZtNetworkId(ctxAppnet, &ztNetworkId)
-		if err != nil {
-			log.Error().Err(err).Interface("ztNetworkId", ztNetworkId).Msg("could not get the connectionInstance using ztNetworkId. Unable to update connection status.")
-			continue
-		}
-		updateConnectionRequest := grpc_application_network_go.UpdateConnectionRequest{
-			OrganizationId:   connectionInstance.OrganizationId,
-			SourceInstanceId: connectionInstance.SourceInstanceId,
-			TargetInstanceId: connectionInstance.TargetInstanceId,
-			InboundName:      connectionInstance.InboundName,
-			OutboundName:     connectionInstance.OutboundName,
-			UpdateStatus:     true,
-			Status:           grpc_application_network_go.ConnectionStatus_ESTABLISHED,
-		}
-		log.Debug().Interface("updateCopnnectionRequest", updateConnectionRequest).Msg("---MarcosG--- BEFORE send update connection request")
-		_, err = m.AppNetClient.UpdateConnection(ctxAppnet, &updateConnectionRequest)
-		log.Debug().Interface("updateCopnnectionRequest", updateConnectionRequest).Msg("---MarcosG--- AFTER send update connection request")
-		if err != nil {
-			log.Error().Err(err).
-				Interface("connectionInstance", connectionInstance).
-				Interface("updateConnectionRequest", updateConnectionRequest).
-				Msg("error when updating connectionInstance. Unable to update connection status.")
-		}
-		cancelAppnet()
 	}
 
 
@@ -602,5 +578,42 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 	}
 
 	// if the inbound IP is stored -> send a route to add this IP itself
-	return m.sendUpdateRoute(request, inboundList)
+	sendUpdateRouteErr := m.sendUpdateRoute(request, inboundList)
+
+	if allConnected {
+		for _, conn := range list.Connections {
+			ctxAppnet, cancelAppnet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+			ztNetworkId := grpc_application_network_go.ZTNetworkConnectionId{
+				OrganizationId: request.OrganizationId,
+				ZtNetworkId:    conn.ZtNetworkId,
+			}
+			connectionInstance, err := m.AppNetClient.GetConnectionByZtNetworkId(ctxAppnet, &ztNetworkId)
+			if err != nil {
+				log.Error().Err(err).Interface("ztNetworkId", ztNetworkId).Msg("could not get the connectionInstance using ztNetworkId. Unable to update connection status.")
+				continue
+			}
+			updateConnectionRequest := grpc_application_network_go.UpdateConnectionRequest{
+				OrganizationId:   connectionInstance.OrganizationId,
+				SourceInstanceId: connectionInstance.SourceInstanceId,
+				TargetInstanceId: connectionInstance.TargetInstanceId,
+				InboundName:      connectionInstance.InboundName,
+				OutboundName:     connectionInstance.OutboundName,
+				UpdateStatus:     true,
+				Status:           grpc_application_network_go.ConnectionStatus_ESTABLISHED,
+			}
+			if sendUpdateRouteErr != nil {
+				updateConnectionRequest.Status = grpc_application_network_go.ConnectionStatus_FAILED
+			}
+			_, err = m.AppNetClient.UpdateConnection(ctxAppnet, &updateConnectionRequest)
+			if err != nil {
+				log.Error().Err(err).
+					Interface("connectionInstance", connectionInstance).
+					Interface("updateConnectionRequest", updateConnectionRequest).
+					Msg("error when updating connectionInstance. Unable to update connection status.")
+			}
+			cancelAppnet()
+		}
+	}
+
+	return sendUpdateRouteErr
 }
