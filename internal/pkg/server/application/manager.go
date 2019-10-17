@@ -718,10 +718,11 @@ func (m *Manager) AddConnection(addRequest *grpc_application_network_go.AddConne
 
         _, err := m.appNetClient.AddZTNetworkConnection(ctxAdd, &grpc_application_network_go.ZTNetworkConnection{
             OrganizationId: addRequest.OrganizationId,
-            ZtNetworkId: ztNetwork.ID,
-            AppInstanceId: addRequest.SourceInstanceId,
-            Side: grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND,
-            ServiceId: source.ServiceId,
+            ZtNetworkId:    ztNetwork.ID,
+            AppInstanceId:  addRequest.SourceInstanceId,
+            Side:           grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND,
+            ServiceId:      source.ServiceId,
+            ClusterId:      source.ClusterId,
 
         })
         if err != nil {
@@ -753,10 +754,11 @@ func (m *Manager) AddConnection(addRequest *grpc_application_network_go.AddConne
             Msg("ADD ztNetworkConnection")
         _, err := m.appNetClient.AddZTNetworkConnection(ctxAddT, &grpc_application_network_go.ZTNetworkConnection{
             OrganizationId: addRequest.OrganizationId,
-            ZtNetworkId: ztNetwork.ID,
-            AppInstanceId: addRequest.TargetInstanceId,
-            Side: grpc_application_network_go.ConnectionSide_SIDE_INBOUND,
-            ServiceId: target.ServiceId,
+            ZtNetworkId:    ztNetwork.ID,
+            AppInstanceId:  addRequest.TargetInstanceId,
+            Side:           grpc_application_network_go.ConnectionSide_SIDE_INBOUND,
+            ServiceId:      target.ServiceId,
+            ClusterId:      target.ClusterId,
         })
         if err != nil {
             log.Error().Str("OrganizationID", addRequest.OrganizationId).Str("ztNetwork.ID", ztNetwork.ID).
@@ -810,7 +812,7 @@ func (m *Manager) RemoveConnection(removeRequest *grpc_application_network_go.Re
         // send a message to zt-nalej (through deployment-manager) to leave the network
         ctxList, cancelList := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
         defer cancelList()
-        ztConn, err := m.appNetClient.ListZTNetworkConnection(ctxList, &grpc_application_network_go.ZTNetworkConnectionId{
+        ztConn, err := m.appNetClient.ListZTNetworkConnection(ctxList, &grpc_application_network_go.ZTNetworkId{
             OrganizationId: removeRequest.OrganizationId,
             ZtNetworkId:    conn.ZtNetworkId,
         })
@@ -833,7 +835,7 @@ func (m *Manager) RemoveConnection(removeRequest *grpc_application_network_go.Re
         // Remove ZT-Connections
         ctxRemove, cancelRemove := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
         defer cancelRemove()
-        _, err = m.appNetClient.RemoveZTNetworkConnection(ctxRemove, &grpc_application_network_go.ZTNetworkConnectionId{
+        _, err = m.appNetClient.RemoveZTNetworkConnectionByNetworkId(ctxRemove, &grpc_application_network_go.ZTNetworkId{
             OrganizationId: removeRequest.OrganizationId,
             ZtNetworkId: conn.ZtNetworkId,
         })
