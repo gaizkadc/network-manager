@@ -287,7 +287,7 @@ func (m *Manager) AuthorizeZTConnection(request *grpc_network_go.AuthorizeZTConn
 	ctx, cancel := context.WithTimeout(context.Background(), NetworkQueryTimeout)
 	defer cancel()
 	// Check if the instance is joined in this zt-network
-	list, err := m.AppNetClient.ListZTNetworkConnection(ctx, &grpc_application_network_go.ZTNetworkConnectionId{
+	list, err := m.AppNetClient.ListZTNetworkConnection(ctx, &grpc_application_network_go.ZTNetworkId{
 		OrganizationId:	request.OrganizationId,
 		ZtNetworkId: 	request.NetworkId,
 	})
@@ -451,9 +451,9 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 	// Get connection to get the outbound name
 	ctx3, cancel3 := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
 	defer cancel3()
-	conn, err := m.AppNetClient.GetConnectionByZtNetworkId(ctx3, &grpc_application_network_go.ZTNetworkConnectionId {
-		OrganizationId: outbounds[0].OrganizationId, //request.OrganizationId,
-		ZtNetworkId:    outbounds[0].ZtNetworkId, //request.NetworkId,
+	conn, err := m.AppNetClient.GetConnectionByZtNetworkId(ctx3, &grpc_application_network_go.ZTNetworkId {
+		OrganizationId: outbounds[0].OrganizationId,
+		ZtNetworkId:    outbounds[0].ZtNetworkId,
 	})
 
 	if err != nil {
@@ -526,7 +526,7 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 	defer cancelList()
 	// list contains the inbound and the outbound appInstanceId
 	// get all the services involved in this connection
-	list, err := m.AppNetClient.ListZTNetworkConnection(ctxList, &grpc_application_network_go.ZTNetworkConnectionId{
+	list, err := m.AppNetClient.ListZTNetworkConnection(ctxList, &grpc_application_network_go.ZTNetworkId{
 		OrganizationId: request.OrganizationId,
 		ZtNetworkId: request.NetworkId,
 	})
@@ -555,12 +555,9 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 		ZtNetworkId: 	request.NetworkId,
 		AppInstanceId: 	request.AppInstanceId,
 		ServiceId: 		request.ServiceId,
-		ZtMember: 		request.MemberId,
+		ClusterId: 		request.ClusterId,
 		UpdateZtIp: 	true,
 		ZtIp: 			request.ZtIp,
-		UpdateClusterId: true,
-		ClusterId: 		request.ClusterId,
-
 	})
 	if err != nil {
 		log.Error().Err(err).Interface("request", request).Msg("error updating ztIp in the inbound")
