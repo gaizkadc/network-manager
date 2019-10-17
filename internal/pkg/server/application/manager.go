@@ -835,7 +835,7 @@ func (m *Manager) RemoveConnection(removeRequest *grpc_application_network_go.Re
         // Remove ZT-Connections
         ctxRemove, cancelRemove := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
         defer cancelRemove()
-        _, err = m.appNetClient.RemoveZTNetworkConnection(ctxRemove, &grpc_application_network_go.ZTNetworkConnectionId{
+        _, err = m.appNetClient.RemoveZTNetworkConnectionByNetworkId(ctxRemove, &grpc_application_network_go.ZTNetworkId{
             OrganizationId: removeRequest.OrganizationId,
             ZtNetworkId: conn.ZtNetworkId,
         })
