@@ -529,8 +529,8 @@ func (m *Manager) UpdateConnectionStatus(connectionInstance *grpc_application_ne
 		Status:           newStatus,
 	}
 	ctxAppnet, cancelAppnet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+	defer cancelAppnet()
 	_, err := m.AppNetClient.UpdateConnection(ctxAppnet, &updateConnectionRequest)
-	cancelAppnet()
 	if err != nil {
 		log.Error().Err(err).
 			Interface("connectionInstance", connectionInstance).
