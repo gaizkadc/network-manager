@@ -328,7 +328,7 @@ func (m *Manager) getFQDN(serviceName string, organizationId string, appInstance
 }
 
 // send a message to update the route to the request pod (if there is an inbound with IP)
-func (m *Manager) sendUpdateRoute(request *grpc_network_go.RegisterZTConnectionRequest, inbounds []*grpc_application_network_go.ZTNetworkConnection) derrors.Error{
+func (m *Manager) sendUpdateRoute(request *grpc_network_go.RegisterZTConnectionRequest, inbounds []*grpc_application_network_go.ZTNetworkConnection, allConnected bool) derrors.Error {
 
 	log.Debug().Interface("request", request).Interface("inbounds", inbounds).Msg("sendUpdateRoute")
 	// get the best inbound IP (for now,the first one)
@@ -346,23 +346,23 @@ func (m *Manager) sendUpdateRoute(request *grpc_network_go.RegisterZTConnectionR
 
 	return m.sendUpdateRouteToOutbounds(&grpc_network_go.RegisterZTConnectionRequest{
 		OrganizationId: inboundReg.OrganizationId,
-		AppInstanceId: 	inboundReg.AppInstanceId,
-		ZtIp: 			inboundReg.ZtIp,
-		ClusterId: 		inboundReg.ClusterId,
-		ServiceId: 		inboundReg.ServiceId,
-		IsInbound: 		true,
+		AppInstanceId:  inboundReg.AppInstanceId,
+		ZtIp:           inboundReg.ZtIp,
+		ClusterId:      inboundReg.ClusterId,
+		ServiceId:      inboundReg.ServiceId,
+		IsInbound:      true,
 	}, []*grpc_application_network_go.ZTNetworkConnection{
 		{
 			OrganizationId: request.OrganizationId,
-			ZtNetworkId: request.NetworkId,
-			AppInstanceId: request.AppInstanceId,
-			ServiceId: request.ServiceId,
-			ZtMember: request.MemberId,
-			ZtIp: request.ZtIp,
-			ClusterId: request.ClusterId,
-			Side: grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND,
+			ZtNetworkId:    request.NetworkId,
+			AppInstanceId:  request.AppInstanceId,
+			ServiceId:      request.ServiceId,
+			ZtMember:       request.MemberId,
+			ZtIp:           request.ZtIp,
+			ClusterId:      request.ClusterId,
+			Side:           grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND,
 		},
-	})
+	}, allConnected)
 
 }
 
@@ -420,7 +420,7 @@ func (m *Manager) getServiceGroupId(organizationID string, applicationId string,
 }
 
 // send a message to update the route to all outbound pod if the pod is registered (has IP)
-func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZTConnectionRequest, outbounds []*grpc_application_network_go.ZTNetworkConnection) derrors.Error{
+func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZTConnectionRequest, outbounds []*grpc_application_network_go.ZTNetworkConnection, allConnected bool) derrors.Error {
 
 	log.Debug().Interface("request", request).Interface("outbounds", outbounds).Msg("sendUpdateRouteToOutbounds")
 
@@ -457,9 +457,9 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 	})
 
 	if err != nil {
-		return derrors.NewInternalError("impossible to retrieve connetion instance ", err)
+		return derrors.NewInternalError("impossible to retrieve connection instance ", err)
 	}
-	log.Debug().Interface("conn", conn).Msg("connection ")
+	log.Debug().Interface("conn", conn).Msg("connection")
 
 	//fqdn := m.getFQDN(serviceName, request.OrganizationId, request.AppInstanceId, conn.OutboundName)
 	fqdn := m.getFQDN(serviceName, outbounds[0].OrganizationId, outbounds[0].AppInstanceId, conn.OutboundName)
@@ -470,7 +470,6 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 	log.Debug().Str("virtualIP", virtualIP).Str("fqdn", fqdn).Msg("getting virtualIP")
 
 	for _, outbound := range outbounds {
-
 		if outbound.ZtIp != "" && outbound.ClusterId != "" {
 			// 1) serviceGroupId
 			serviceGroupId, nErr  := m.getServiceGroupId(outbound.OrganizationId, outbound.AppInstanceId, outbound.ServiceId)
@@ -501,19 +500,43 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 
 				client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
 				ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-				defer cancel()
 				log.Debug().Str("clusterId", outbound.ClusterId).Interface("request", newRoute).Msg("set route update")
 				_, err = client.SetServiceRoute(ctx, &newRoute)
+				cancel()
 				if err != nil {
 					log.Error().Err(err).Msg("there was an error setting a new route")
 					return derrors.NewInternalError("there was an error setting a new route",err)
 				}
 			}
-
 		}
 	}
 
+	if allConnected {
+		m.UpdateConnectionStatus(conn)
+	}
+
 	return nil
+}
+
+func (m *Manager) UpdateConnectionStatus(connectionInstance *grpc_application_network_go.ConnectionInstance) {
+	updateConnectionRequest := grpc_application_network_go.UpdateConnectionRequest{
+		OrganizationId:   connectionInstance.OrganizationId,
+		SourceInstanceId: connectionInstance.SourceInstanceId,
+		TargetInstanceId: connectionInstance.TargetInstanceId,
+		InboundName:      connectionInstance.InboundName,
+		OutboundName:     connectionInstance.OutboundName,
+		UpdateStatus:     true,
+		Status:           grpc_application_network_go.ConnectionStatus_ESTABLISHED,
+	}
+	ctxAppnet, cancelAppnet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+	_, err := m.AppNetClient.UpdateConnection(ctxAppnet, &updateConnectionRequest)
+	cancelAppnet()
+	if err != nil {
+		log.Error().Err(err).
+			Interface("connectionInstance", connectionInstance).
+			Interface("updateConnectionRequest", updateConnectionRequest).
+			Msg("error when updating connectionInstance. Unable to update connection status.")
+	}
 }
 
 func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnectionRequest) derrors.Error {
@@ -571,51 +594,10 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 		}
 	}
 
-
 	if request.IsInbound {
 		// send to all the outbound pods a message to add the new route
-		return m.sendUpdateRouteToOutbounds(request, outboundList)
+		return m.sendUpdateRouteToOutbounds(request, outboundList, allConnected)
 	}
-
 	// if the inbound IP is stored -> send a route to add this IP itself
-	sendUpdateRouteErr := m.sendUpdateRoute(request, inboundList)
-
-	if allConnected {
-		for _, conn := range list.Connections {
-			ctxAppnet, cancelAppnet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-			ztNetworkId := grpc_application_network_go.ZTNetworkConnectionId{
-				OrganizationId: request.OrganizationId,
-				ZtNetworkId:    conn.ZtNetworkId,
-			}
-			connectionInstance, err := m.AppNetClient.GetConnectionByZtNetworkId(ctxAppnet, &ztNetworkId)
-			cancelAppnet()
-			if err != nil {
-				log.Error().Err(err).Interface("ztNetworkId", ztNetworkId).Msg("could not get the connectionInstance using ztNetworkId. Unable to update connection status.")
-				continue
-			}
-			updateConnectionRequest := grpc_application_network_go.UpdateConnectionRequest{
-				OrganizationId:   connectionInstance.OrganizationId,
-				SourceInstanceId: connectionInstance.SourceInstanceId,
-				TargetInstanceId: connectionInstance.TargetInstanceId,
-				InboundName:      connectionInstance.InboundName,
-				OutboundName:     connectionInstance.OutboundName,
-				UpdateStatus:     true,
-				Status:           grpc_application_network_go.ConnectionStatus_ESTABLISHED,
-			}
-			if sendUpdateRouteErr != nil {
-				updateConnectionRequest.Status = grpc_application_network_go.ConnectionStatus_FAILED
-			}
-			ctxAppnet, cancelAppnet = context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-			_, err = m.AppNetClient.UpdateConnection(ctxAppnet, &updateConnectionRequest)
-			cancelAppnet()
-			if err != nil {
-				log.Error().Err(err).
-					Interface("connectionInstance", connectionInstance).
-					Interface("updateConnectionRequest", updateConnectionRequest).
-					Msg("error when updating connectionInstance. Unable to update connection status.")
-			}
-		}
-	}
-
-	return sendUpdateRouteErr
+	return m.sendUpdateRoute(request, inboundList, allConnected)
 }
