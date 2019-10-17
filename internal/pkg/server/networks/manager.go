@@ -512,13 +512,13 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 	}
 
 	if allConnected {
-		m.UpdateConnectionStatus(conn)
+		m.UpdateConnectionStatus(conn, grpc_application_network_go.ConnectionStatus_ESTABLISHED)
 	}
 
 	return nil
 }
 
-func (m *Manager) UpdateConnectionStatus(connectionInstance *grpc_application_network_go.ConnectionInstance) {
+func (m *Manager) UpdateConnectionStatus(connectionInstance *grpc_application_network_go.ConnectionInstance, newStatus grpc_application_network_go.ConnectionStatus) {
 	updateConnectionRequest := grpc_application_network_go.UpdateConnectionRequest{
 		OrganizationId:   connectionInstance.OrganizationId,
 		SourceInstanceId: connectionInstance.SourceInstanceId,
@@ -526,7 +526,7 @@ func (m *Manager) UpdateConnectionStatus(connectionInstance *grpc_application_ne
 		InboundName:      connectionInstance.InboundName,
 		OutboundName:     connectionInstance.OutboundName,
 		UpdateStatus:     true,
-		Status:           grpc_application_network_go.ConnectionStatus_ESTABLISHED,
+		Status:           newStatus,
 	}
 	ctxAppnet, cancelAppnet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
 	_, err := m.AppNetClient.UpdateConnection(ctxAppnet, &updateConnectionRequest)
