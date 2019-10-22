@@ -1,9 +1,13 @@
 {
   "language": "golang",
+  "version": "v0.4.0",
   "application_list": [
     "network-manager",
     "networking-cli",
     "dns-cli"
+  ],
+  "image_list": [
+    "network-manager"
   ],
   "tools": [
     "azure",
