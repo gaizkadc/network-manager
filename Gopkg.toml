@@ -20,7 +20,7 @@
 
 [[constraint]]
   name="github.com/nalej/grpc-application-network-go"
-  version="=v0.0.13"
+  version="=v0.0.15"
 
 [[constraint]]
   name="github.com/nalej/grpc-app-cluster-api-go"

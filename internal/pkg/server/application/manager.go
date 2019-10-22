@@ -11,6 +11,7 @@ import (
     "github.com/nalej/grpc-app-cluster-api-go"
     "github.com/nalej/grpc-application-go"
     "github.com/nalej/grpc-application-network-go"
+    "github.com/nalej/grpc-conductor-go"
     "github.com/nalej/grpc-deployment-manager-go"
     "github.com/nalej/grpc-infrastructure-go"
     "github.com/nalej/grpc-network-go"
@@ -534,6 +535,7 @@ func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID s
     }
 
     clusterAddress := fmt.Sprintf("%s:%d", clusterHostname.Hostname, utils.APP_CLUSTER_API_PORT)
+    log.Debug().Str("clusterAddress", clusterAddress).Msg("getting clusterAddress")
     connTarget, err := m.connHelper.GetAppClusterClients().GetConnection(clusterAddress)
     if err != nil {
         log.Error().Err(err).Msg("impossible to get cluster connection")
@@ -556,7 +558,8 @@ func (m *Manager) sendJoin(clusterID string, organizationID string, instanceID s
         log.Debug().Str("clusterId", clusterID).Msg("send join ztNetwork")
         _, err = client.JoinZTNetwork(ctx, ztRequest)
         if err != nil {
-            log.Error().Err(err).Interface("ztRequest", ztRequest).Msg("there was an error sending join message")
+            log.Error().Err(err).Interface("ztRequest", ztRequest).Str("clusterId", clusterID).Str("clusterAddress", clusterAddress).
+                Msg("there was an error sending join message")
             time.Sleep(ApplicationManagerTimeout)
         } else {
             sent = true
@@ -842,7 +845,7 @@ func (m *Manager) RemoveConnection(removeRequest *grpc_application_network_go.Re
         if err != nil {
             log.Error().Err(delErr).Str("organizationId", removeRequest.OrganizationId).Str("ztNetworkId", conn.ZtNetworkId).
                 Msg("error deleting zero tier connections")
-            return err
+            //return err
         }
     }
 
@@ -855,4 +858,204 @@ func (m *Manager) RemoveConnection(removeRequest *grpc_application_network_go.Re
     if err != nil {
         return  err
     }
-    return nil }
+    return nil
+}
+
+// getConnections returns the inbound and outbound connections of and instance
+func (m *Manager) getConnections(organizationId string, appInstanceId string) (*grpc_application_network_go.ConnectionInstanceList, *grpc_application_network_go.ConnectionInstanceList) {
+
+    appInstance := &grpc_application_go.AppInstanceId{
+        OrganizationId: organizationId,
+        AppInstanceId:  appInstanceId,
+    }
+    ctxList, cancelList := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+    defer cancelList()
+    // get ZTConnection
+    inboundList, err := m.appNetClient.ListInboundConnections(ctxList, appInstance)
+    if err != nil {
+        log.Error().Err(err).Msg("Error getting inbound connections")
+    }
+
+    ctxList2, cancelList2 := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+    defer cancelList2()
+    // get ZTConnection
+    outboundList, err2 := m.appNetClient.ListOutboundConnections(ctxList2, appInstance)
+    if err2 != nil {
+        log.Error().Err(err).Msg("Error getting outbound connections")
+    }
+
+    return inboundList, outboundList
+}
+
+// manageConnectionsServiceRunning checks if the service should have the leave the connection
+func (m *Manager) manageConnectionsServiceTerminating (instance *grpc_application_go.AppInstance, connection *grpc_application_network_go.ConnectionInstance,
+    isInbound bool, service *grpc_conductor_go.ServiceUpdate) {
+
+    var ids []deployedOnInfo
+    var idErr derrors.Error
+    if isInbound {
+        // if the service is the owner of the inbound...
+        ids, idErr = m.getServiceIdForInbound(instance, connection.InboundName)
+        if idErr != nil {
+            log.Error().Err(idErr).Msg("error getting service id")
+        }
+    }else{
+        ids, idErr = m.getServiceIdForOutbound(instance, connection.OutboundName)
+        if idErr != nil {
+            log.Error().Err(idErr).Msg("error getting service id")
+        }
+    }
+    // check if the serviceId is in the list
+    found := false
+    for i:=0; i< len(ids) && ! found; i++ {
+        if ids[i].ServiceId == service.ServiceId {
+            found = true
+        }
+    }
+    if found {
+
+        // getZTConnection to get ZTMember and remove (unauthorized)
+        ctxGet, cancelGet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+        defer cancelGet()
+        ztConnection, err := m.appNetClient.ListZTNetworkConnection(ctxGet, &grpc_application_network_go.ZTNetworkId{
+            OrganizationId:instance.OrganizationId,
+            ZtNetworkId: connection.ZtNetworkId,
+        })
+        if err != nil {
+            log.Error().Err(err).Str("organizationId", instance.OrganizationId).
+                Str("networkId", connection.ZtNetworkId).
+                Msg("error getting zt-connection unauthorized message can not be sent")
+        }else {
+            ztMember := ""
+            for _, conn := range ztConnection.Connections {
+                if conn.AppInstanceId == instance.AppInstanceId && conn.ServiceId == service.ServiceId && conn.ClusterId == service.ClusterId {
+                    ztMember = conn.ZtMember
+                }
+            }
+            if ztMember != "" {
+                unErr := m.ZTClient.Unauthorize(connection.ZtNetworkId, ztMember)
+                if unErr != nil {
+                  log.Error().Err(unErr).Msg("error sending unauthorized message")
+                }
+            } else {
+                log.Warn().Msg("ztMember not found, unauthorized message can not be sent")
+            }
+        }
+
+
+        sendErr := m.sendLeave(service.OrganizationId, service.ClusterId, service.ApplicationInstanceId, service.ServiceId, true, connection.ZtNetworkId)
+        if sendErr != nil {
+            log.Error().Err(sendErr).Msg("error sending Leave Message to the pod")
+        }
+        ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+        defer cancel()
+        _, err = m.appNetClient.RemoveZTNetworkConnection(ctx, &grpc_application_network_go.ZTNetworkConnectionId{
+            OrganizationId: service.OrganizationId,
+            ZtNetworkId:    connection.ZtNetworkId,
+            AppInstanceId:  service.ApplicationInstanceId,
+            ServiceId:      service.ServiceId,
+            ClusterId:      service.ClusterId,
+        })
+        if err != nil {
+            log.Error().Err(sendErr).Msg("error removing ZTConnection")
+        }
+
+        // TODO: Update connection Status (wait until SERVICE_TERMINATED is sent)
+    }
+}
+
+// manageConnectionsServiceRunning checks if the service should have the connection and it is, send a join message to the pod
+func (m *Manager) manageConnectionsServiceRunning (instance *grpc_application_go.AppInstance, connection *grpc_application_network_go.ConnectionInstance,
+    isInbound bool, service *grpc_conductor_go.ServiceUpdate) {
+
+    var ids []deployedOnInfo
+    var idErr derrors.Error
+    if isInbound {
+        // if the service is the owner of the inbound...
+        ids, idErr = m.getServiceIdForInbound(instance, connection.InboundName)
+        if idErr != nil {
+            log.Error().Err(idErr).Msg("error getting service id")
+        }
+    }else{
+        ids, idErr = m.getServiceIdForOutbound(instance, connection.OutboundName)
+        if idErr != nil {
+            log.Error().Err(idErr).Msg("error getting service id")
+        }
+    }
+    // check if the serviceId is in the list
+    found := false
+    for i:=0; i< len(ids) && ! found; i++ {
+        if ids[i].ServiceId == service.ServiceId {
+            found = true
+        }
+    }
+    if found {
+        log.Debug().Str("cluster", service.ClusterId).Msg("manageConnectionsServiceRunning - sending join")
+        sendErr := m.sendJoin(service.ClusterId, service.OrganizationId, service.ApplicationInstanceId, service.ServiceId, connection.ZtNetworkId, isInbound)
+        if sendErr != nil {
+            log.Error().Err(sendErr).Msg("error sending Join Message to the pod")
+        }else{
+            ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+            defer cancel()
+            var side grpc_application_network_go.ConnectionSide
+            if isInbound {
+                side = grpc_application_network_go.ConnectionSide_SIDE_INBOUND
+            }else{
+                side = grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND
+            }
+            m.appNetClient.AddZTNetworkConnection(ctx, &grpc_application_network_go.ZTNetworkConnection{
+                OrganizationId: service.OrganizationId,
+                ZtNetworkId: connection.ZtNetworkId,
+                AppInstanceId: service.ApplicationInstanceId,
+                ServiceId: service.ServiceId,
+                ClusterId: service.ClusterId,
+                Side: side,
+            })
+        }
+
+        // TODO: Update connection Status (wait until SERVICE_TERMINATED is sent)
+    }
+}
+
+// ManageConnections receives DeploymentServiceUpdateRequest messages from the bus and manage
+// connections depending of the service updated (if it has or no connections, if it is added or removed, etc)
+func (m *Manager) ManageConnections (request *grpc_conductor_go.DeploymentServiceUpdateRequest) derrors.Error{
+
+    for _, service := range request.List {
+        log.Info().Str("serviceId", service.ServiceId).Str("clusterID", service.ClusterId).Str("status", service.Status.String()).Msg("Service updated")
+        // get connections to see if the services has or not one of them
+        inConn, outConn := m.getConnections(service.OrganizationId, service.ApplicationInstanceId)
+
+        // get the instance to has the relation between services and inbound/outbound interfaces
+        ctxGet, cancelGet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+        instance, err := m.applicationClient.GetAppInstance(ctxGet, &grpc_application_go.AppInstanceId{
+            OrganizationId: request.OrganizationId,
+            AppInstanceId: service.ApplicationInstanceId,
+        })
+        if err != nil {
+            log.Error().Err(err).Msg("error getting instance")
+            cancelGet()
+            return conversions.ToDerror(err)
+        }
+        cancelGet()
+        if service.Status == grpc_application_go.ServiceStatus_SERVICE_RUNNING {
+            for _, inbound := range inConn.Connections {
+                m.manageConnectionsServiceRunning(instance, inbound, true, service)
+            }
+            for _, outbound := range outConn.Connections {
+                m.manageConnectionsServiceRunning(instance, outbound, false, service)
+            }
+         }else if service.Status == grpc_application_go.ServiceStatus_SERVICE_TERMINATED ||service.Status == grpc_application_go.ServiceStatus_SERVICE_TERMINATING {
+             for _, inbound := range inConn.Connections {
+                 m.manageConnectionsServiceTerminating(instance, inbound, true, service)
+             }
+             for _, outbound := range outConn.Connections {
+                 m.manageConnectionsServiceTerminating(instance, outbound, false, service)
+             }
+        }else{
+            log.Debug().Str("Status", service.Status.String()).Msg("Nothing to do?")
+        }
+    }
+
+    return nil
+}
