@@ -891,6 +891,7 @@ func (m *Manager) getConnections(organizationId string, appInstanceId string) (*
 func (m *Manager) manageConnectionsServiceTerminating (instance *grpc_application_go.AppInstance, connection *grpc_application_network_go.ConnectionInstance,
     isInbound bool, service *grpc_conductor_go.ServiceUpdate) {
 
+
     var ids []deployedOnInfo
     var idErr derrors.Error
     if isInbound {
@@ -941,12 +942,6 @@ func (m *Manager) manageConnectionsServiceTerminating (instance *grpc_applicatio
                 log.Warn().Msg("ztMember not found, unauthorized message can not be sent")
             }
         }
-
-
-        sendErr := m.sendLeave(service.OrganizationId, service.ClusterId, service.ApplicationInstanceId, service.ServiceId, true, connection.ZtNetworkId)
-        if sendErr != nil {
-            log.Error().Err(sendErr).Msg("error sending Leave Message to the pod")
-        }
         ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
         defer cancel()
         _, err = m.appNetClient.RemoveZTNetworkConnection(ctx, &grpc_application_network_go.ZTNetworkConnectionId{
@@ -957,10 +952,12 @@ func (m *Manager) manageConnectionsServiceTerminating (instance *grpc_applicatio
             ClusterId:      service.ClusterId,
         })
         if err != nil {
-            log.Error().Err(sendErr).Msg("error removing ZTConnection")
+            log.Error().Err(err).Msg("error removing ZTConnection")
         }
 
         // TODO: Update connection Status (wait until SERVICE_TERMINATED is sent)
+    } else {
+        log.Debug().Msg("no service id found")
     }
 }
 
@@ -1025,6 +1022,9 @@ func (m *Manager) ManageConnections (request *grpc_conductor_go.DeploymentServic
         log.Info().Str("serviceId", service.ServiceId).Str("clusterID", service.ClusterId).Str("status", service.Status.String()).Msg("Service updated")
         // get connections to see if the services has or not one of them
         inConn, outConn := m.getConnections(service.OrganizationId, service.ApplicationInstanceId)
+
+        log.Debug().Interface("inbound", inConn).Msg("inbound connections")
+        log.Debug().Interface("outbound", outConn).Msg("outbound connections")
 
         // get the instance to has the relation between services and inbound/outbound interfaces
         ctxGet, cancelGet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
