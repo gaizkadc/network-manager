@@ -5,6 +5,7 @@ import (
 	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-utils/pkg/tools"
 	"github.com/nalej/nalej-bus/pkg/bus/pulsar-comcast"
+	"github.com/nalej/nalej-bus/pkg/queue/application/events"
 	"github.com/nalej/nalej-bus/pkg/queue/network/ops"
 	"github.com/nalej/network-manager/internal/pkg/consul"
 	"github.com/nalej/network-manager/internal/pkg/queue"
@@ -107,6 +108,20 @@ func (s *Service) Launch() {
 	networkOpsQueue := queue.NewNetworkOpsHandler(netManager, dnsManager, netAppManager, networkOpsConsumer)
 	networkOpsQueue.Run()
 	log.Info().Msg("initialize network ops manager done")
+
+	// application events consumer
+	log.Info().Msg("initialize application events manager")
+	appEventsConfig := events.NewConfigApplicationEventsConsumer(1, events.ConsumableStructsApplicationEventsConsumer{
+		DeploymentServiceUpdateRequest: true,
+	})
+	appEventsConsumer, err := events.NewApplicationEventsConsumer(pulsarclient, "network-manager-application-events", true, appEventsConfig)
+	if err != nil {
+		log.Panic().Err(err).Msg("impossible to initialize application events manager")
+	}
+	appEventsQueue := queue.NewAppEventsHandler(netAppManager, appEventsConsumer)
+	appEventsQueue.Run()
+	log.Info().Msg("initialize application events manager done")
+
 
 	// gRPC Service
 	grpcServer := grpc.NewServer()

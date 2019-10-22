@@ -549,7 +549,7 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 	defer cancelList()
 
 
-	log.Debug().Msg("update zt-networkConnection")
+	log.Debug().Interface("request", request).Msg("update zt-networkConnection")
 	ctxUpdate, cancelUpdate := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
 	defer cancelUpdate()
 
@@ -561,6 +561,8 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 		ClusterId: 		request.ClusterId,
 		UpdateZtIp: 	true,
 		ZtIp: 			request.ZtIp,
+		UpdateZtMember: true,
+		ZtMember: 		request.MemberId,
 	})
 	if err != nil {
 		log.Error().Err(err).Interface("request", request).Msg("error updating ztIp in the inbound")

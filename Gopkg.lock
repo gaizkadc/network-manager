@@ -200,12 +200,12 @@
   version = "v0.0.86"
 
 [[projects]]
-  digest = "1:ff16cf715f64d0a449e577079d885382b435a97d0afb25b8613a3e0bec6f2e9e"
+  digest = "1:345c4e990857221495cc88b1d8ce32ee81de776f747b9d4404859896d38f091d"
   name = "github.com/nalej/grpc-application-network-go"
   packages = ["."]
   pruneopts = ""
-  revision = "4e2f8c63efcdfd5519cdbcd797a4d62976d94054"
-  version = "v0.0.13"
+  revision = "23e31ddcb31803af6616c30e02779ccc44607350"
+  version = "v0.0.15"
 
 [[projects]]
   digest = "1:be9824efa8944bc7180a51b2e0c1b62d49902a3e5faa3a1ed57a15358e465096"
@@ -216,36 +216,36 @@
   version = "v0.0.53"
 
 [[projects]]
-  digest = "1:212d8473b457197545727bcc3472b39eac0703064a7bc1c09ff1a8c7975d37f3"
+  digest = "1:138ee21ed5896c1c96e4e87ec0a5f729ab9be0545bd0362fc6ffdc39e81b0cff"
   name = "github.com/nalej/grpc-bus-go"
   packages = ["."]
   pruneopts = ""
-  revision = "f1687a1162b158a5db8fb44dd7927165b3f2aa89"
-  version = "v0.0.20"
+  revision = "b59079ae38f7c9eb535b1876c6bb319fddf1baa4"
+  version = "v0.0.21"
 
 [[projects]]
-  digest = "1:4e897954e75cb3032f468b2837db1a39dfebb75368f2df30f80271c369ab3788"
+  digest = "1:bfd0870c38704b5e43be3fd36c0b2726ffcfc0f232244a18f26db515deac754b"
   name = "github.com/nalej/grpc-cluster-watcher-go"
   packages = ["."]
   pruneopts = ""
-  revision = "cadb3729c93fd583a1519e5cf54a89279904d000"
-  version = "v0.0.4"
+  revision = "4f84f9d97050aac4b73c5c0fc45031081237b518"
+  version = "v0.0.5"
 
 [[projects]]
-  digest = "1:4d9aa384a7b493425344b4d2642ca890b21d09ddbf9f4b993038c8f1b82e642d"
+  digest = "1:afebe5d9834769b2016dbd9959f423658e53e6691c08090a746d26e2312b6207"
   name = "github.com/nalej/grpc-common-go"
   packages = ["."]
   pruneopts = ""
-  revision = "58080e20696b548205ebd73411d904950c487261"
-  version = "v0.0.33"
+  revision = "6911d92a2f221527fe4ae93375ffe5a2b71b3c7a"
+  version = "v0.0.34"
 
 [[projects]]
-  digest = "1:b20974f33d5927364de58b99328ee8bdbb23fa0911a92e3a868afec5d92d5466"
+  digest = "1:7a8ba8c56b116a037799514848afacd52474d6c0d33dbc72d3ba7c1de4e7bd33"
   name = "github.com/nalej/grpc-conductor-go"
   packages = ["."]
   pruneopts = ""
-  revision = "7895e36f8e79a9219e48f5a1c72296d1f3928231"
-  version = "v0.0.92"
+  revision = "3cb276e34c5c31e5aeeb9a1279b4682ff9b161ae"
+  version = "v0.0.93"
 
 [[projects]]
   digest = "1:94f368a2db0cd367bbde71ad88dcab84d5b8d78518ef3a0c235976594d304d3f"
@@ -372,16 +372,17 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2dbc60bacbeebcb62e2e90d6bbb2bd4c3361738b91ec3b64dc14fa18962df2cc"
+  digest = "1:6bc893aa405c23d33962570fd3c21dc1212a1f7b7c3f5c2cedbebb24f4d784af"
   name = "github.com/nalej/nalej-bus"
   packages = [
     "pkg/bus",
     "pkg/bus/pulsar-comcast",
     "pkg/queue",
+    "pkg/queue/application/events",
     "pkg/queue/network/ops",
   ]
   pruneopts = ""
-  revision = "cd9869ad0e312be8a0cd6726138cd14c74325683"
+  revision = "69bde926441735c239bb4462de2b67e50ac7b54c"
 
 [[projects]]
   digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
@@ -434,7 +435,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d4d68fea45a3a5fc7645cf2538da3715384ac5eb6bcb72ce82b38cdfca8783e7"
+  digest = "1:acd465770451fe2dd4c15565afc8244859dbcf490bde15cc3447741181e10f29"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -446,15 +447,15 @@
     "trace",
   ]
   pruneopts = ""
-  revision = "da9a3fd4c5820e74b24a6cb7fb438dc9b0dd377c"
+  revision = "ec77196f6094c3492a8b61f2c11cf937f78992ae"
 
 [[projects]]
   branch = "master"
-  digest = "1:055771f25c4d6493a840af5cbdb8da461be2ec1192049dbaebd6ae1a8cbcdea0"
+  digest = "1:f7859b24c4f7a2c384c3d6ef5cdd15641e26a22b3649a52b0ac08d35e518a0de"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = ""
-  revision = "b09406accb4736d857a32bf9444cd7edae2ffa79"
+  revision = "3e7259c5e7c2076bb2728047a3df75adb1bad8e5"
 
 [[projects]]
   digest = "1:740b51a55815493a8d0f2b1e0d0ae48fe48953bf7eaf3fcc4198823bf67768c0"
@@ -550,6 +551,7 @@
     "github.com/nalej/grpc-application-go",
     "github.com/nalej/grpc-application-network-go",
     "github.com/nalej/grpc-common-go",
+    "github.com/nalej/grpc-conductor-go",
     "github.com/nalej/grpc-connectivity-manager-go",
     "github.com/nalej/grpc-deployment-manager-go",
     "github.com/nalej/grpc-infrastructure-go",
@@ -558,6 +560,7 @@
     "github.com/nalej/grpc-utils/pkg/conversions",
     "github.com/nalej/grpc-utils/pkg/tools",
     "github.com/nalej/nalej-bus/pkg/bus/pulsar-comcast",
+    "github.com/nalej/nalej-bus/pkg/queue/application/events",
     "github.com/nalej/nalej-bus/pkg/queue/network/ops",
     "github.com/rs/zerolog",
     "github.com/rs/zerolog/log",
