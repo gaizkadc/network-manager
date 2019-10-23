@@ -874,6 +874,7 @@ func (m *Manager) getConnections(organizationId string, appInstanceId string) (*
     inboundList, err := m.appNetClient.ListInboundConnections(ctxList, appInstance)
     if err != nil {
         log.Error().Err(err).Msg("Error getting inbound connections")
+        inboundList = &grpc_application_network_go.ConnectionInstanceList{Connections:make([]*grpc_application_network_go.ConnectionInstance, 0)}
     }
 
     ctxList2, cancelList2 := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
@@ -882,6 +883,7 @@ func (m *Manager) getConnections(organizationId string, appInstanceId string) (*
     outboundList, err2 := m.appNetClient.ListOutboundConnections(ctxList2, appInstance)
     if err2 != nil {
         log.Error().Err(err).Msg("Error getting outbound connections")
+        outboundList = &grpc_application_network_go.ConnectionInstanceList{Connections:make([]*grpc_application_network_go.ConnectionInstance, 0)}
     }
 
     return inboundList, outboundList
