@@ -976,7 +976,24 @@ func (m *Manager) manageConnectionsServiceTerminating (instance *grpc_applicatio
             log.Error().Err(err).Msg("error removing ZTConnection")
         }
 
-        // TODO: Update connection Status (wait until SERVICE_TERMINATED is sent)
+        // update Connection status -> WAITING
+        log.Info().Str("connectionId", connection.ConnectionId).Msg("Updating status: WAITING!!!!!!!!!!!!!!!!!!!!!")
+        ctxUpdate, cancelUpdate := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+        defer cancelUpdate()
+        _, err = m.appNetClient.UpdateConnection(ctxUpdate, &grpc_application_network_go.UpdateConnectionRequest{
+            OrganizationId: service.OrganizationId,
+            SourceInstanceId: connection.SourceInstanceId,
+            TargetInstanceId: connection.TargetInstanceId,
+            InboundName: connection.InboundName,
+            OutboundName: connection.OutboundName,
+            UpdateIpRange: false,
+            UpdateZtNetworkId: false,
+            UpdateStatus: true,
+            Status: grpc_application_network_go.ConnectionStatus_WAITING,
+        })
+        if err != nil {
+            log.Error().Err(err).Msg("error updating connection status to WAITING")
+        }
     } else {
         log.Debug().Msg("no service id found")
     }
@@ -1037,7 +1054,25 @@ func (m *Manager) manageConnectionsServiceRunning (instance *grpc_application_go
             })
         }
 
-        // TODO: Update connection Status (wait until SERVICE_TERMINATED is sent)
+
+        // update Connection status -> WAITING
+        log.Info().Str("connectionId", connection.ConnectionId).Msg("Updating status: WAITING!!!!!!!!!!!!!!")
+        ctxUpdate, cancelUpdate := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+        defer cancelUpdate()
+        _, err := m.appNetClient.UpdateConnection(ctxUpdate, &grpc_application_network_go.UpdateConnectionRequest{
+            OrganizationId: service.OrganizationId,
+            SourceInstanceId: connection.SourceInstanceId,
+            TargetInstanceId: connection.TargetInstanceId,
+            InboundName: connection.InboundName,
+            OutboundName: connection.OutboundName,
+            UpdateIpRange: false,
+            UpdateZtNetworkId: false,
+            UpdateStatus: true,
+            Status: grpc_application_network_go.ConnectionStatus_WAITING,
+        })
+        if err != nil {
+            log.Error().Err(err).Msg("error updating connection status to WAITING")
+        }
     }
 }
 
