@@ -802,6 +802,25 @@ func (m *Manager) RemoveConnection(removeRequest *grpc_application_network_go.Re
         return err
     }
 
+    // update Connection status -> TERMINATING
+    ctxUpdate, cancelUpdate := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+    defer cancelUpdate()
+    _, err = m.appNetClient.UpdateConnection(ctxUpdate, &grpc_application_network_go.UpdateConnectionRequest{
+        OrganizationId: removeRequest.OrganizationId,
+        SourceInstanceId: removeRequest.SourceInstanceId,
+        TargetInstanceId: removeRequest.TargetInstanceId,
+        InboundName: removeRequest.InboundName,
+        OutboundName: removeRequest.OutboundName,
+        UpdateIpRange: false,
+        UpdateZtNetworkId: false,
+        UpdateStatus: true,
+        Status: grpc_application_network_go.ConnectionStatus_TERMINATED,
+    })
+    if err != nil {
+        log.Error().Err(err).Msg("error updating connection status")
+        return err
+    }
+
     // Remove Zero tier network
     if conn.ZtNetworkId != "" {
         log.Debug().Msg("Remove zero tier network")
@@ -969,6 +988,12 @@ func (m *Manager) manageConnectionsServiceRunning (instance *grpc_application_go
 
     var ids []deployedOnInfo
     var idErr derrors.Error
+
+    // if connection_status == TERMINATING -> nothing to do
+    if connection.Status == grpc_application_network_go.ConnectionStatus_TERMINATED{
+        return
+    }
+
     if isInbound {
         // if the service is the owner of the inbound...
         ids, idErr = m.getServiceIdForInbound(instance, connection.InboundName)
@@ -1022,40 +1047,44 @@ func (m *Manager) ManageConnections (request *grpc_conductor_go.DeploymentServic
 
     for _, service := range request.List {
         log.Info().Str("serviceId", service.ServiceId).Str("clusterID", service.ClusterId).Str("status", service.Status.String()).Msg("Service updated")
-        // get connections to see if the services has or not one of them
-        inConn, outConn := m.getConnections(service.OrganizationId, service.ApplicationInstanceId)
 
-        log.Debug().Interface("inbound", inConn).Msg("inbound connections")
-        log.Debug().Interface("outbound", outConn).Msg("outbound connections")
-
-        // get the instance to has the relation between services and inbound/outbound interfaces
-        ctxGet, cancelGet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-        instance, err := m.applicationClient.GetAppInstance(ctxGet, &grpc_application_go.AppInstanceId{
-            OrganizationId: request.OrganizationId,
-            AppInstanceId: service.ApplicationInstanceId,
-        })
-        if err != nil {
-            log.Error().Err(err).Msg("error getting instance")
-            cancelGet()
-            return conversions.ToDerror(err)
-        }
-        cancelGet()
-        if service.Status == grpc_application_go.ServiceStatus_SERVICE_RUNNING {
-            for _, inbound := range inConn.Connections {
-                m.manageConnectionsServiceRunning(instance, inbound, true, service)
-            }
-            for _, outbound := range outConn.Connections {
-                m.manageConnectionsServiceRunning(instance, outbound, false, service)
-            }
-         }else if service.Status == grpc_application_go.ServiceStatus_SERVICE_TERMINATED ||service.Status == grpc_application_go.ServiceStatus_SERVICE_TERMINATING {
-             for _, inbound := range inConn.Connections {
-                 m.manageConnectionsServiceTerminating(instance, inbound, true, service)
-             }
-             for _, outbound := range outConn.Connections {
-                 m.manageConnectionsServiceTerminating(instance, outbound, false, service)
-             }
-        }else{
+        if service.Status != grpc_application_go.ServiceStatus_SERVICE_RUNNING && service.Status != grpc_application_go.ServiceStatus_SERVICE_TERMINATED && service.Status != grpc_application_go.ServiceStatus_SERVICE_TERMINATING {
             log.Debug().Str("Status", service.Status.String()).Msg("Nothing to do?")
+        }else {
+
+            // get connections to see if the services has or not one of them
+            inConn, outConn := m.getConnections(service.OrganizationId, service.ApplicationInstanceId)
+
+            log.Debug().Interface("inbound", inConn).Msg("inbound connections")
+            log.Debug().Interface("outbound", outConn).Msg("outbound connections")
+
+            // get the instance to has the relation between services and inbound/outbound interfaces
+            ctxGet, cancelGet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+            instance, err := m.applicationClient.GetAppInstance(ctxGet, &grpc_application_go.AppInstanceId{
+                OrganizationId: request.OrganizationId,
+                AppInstanceId:  service.ApplicationInstanceId,
+            })
+            if err != nil {
+                log.Error().Err(err).Msg("error getting instance")
+                cancelGet()
+                return conversions.ToDerror(err)
+            }
+            cancelGet()
+            if service.Status == grpc_application_go.ServiceStatus_SERVICE_RUNNING {
+                for _, inbound := range inConn.Connections {
+                    m.manageConnectionsServiceRunning(instance, inbound, true, service)
+                }
+                for _, outbound := range outConn.Connections {
+                    m.manageConnectionsServiceRunning(instance, outbound, false, service)
+                }
+            } else { // TERMINATED OR TERMINATING
+                for _, inbound := range inConn.Connections {
+                    m.manageConnectionsServiceTerminating(instance, inbound, true, service)
+                }
+                for _, outbound := range outConn.Connections {
+                    m.manageConnectionsServiceTerminating(instance, outbound, false, service)
+                }
+            }
         }
     }
 
