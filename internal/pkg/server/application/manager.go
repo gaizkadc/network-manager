@@ -342,7 +342,7 @@ func (m *Manager) updateRoutesApplication(organizationId string, appInstanceId s
             log.Debug().Str("clusterId", clusterId).Interface("request", newRoute).Msg("set route update")
             _, err = client.SetServiceRoute(ctx, &newRoute)
             if err != nil {
-                log.Error().Err(err).Msg("there was an error setting a new route")
+                log.Error().Err(err).Msg("there was an error setting a new route-updating routes application")
                 return derrors.NewInternalError("there was an error setting a new route",err)
             }
         }
@@ -977,7 +977,7 @@ func (m *Manager) manageConnectionsServiceTerminating (instance *grpc_applicatio
         }
 
         // update Connection status -> WAITING
-        log.Info().Str("connectionId", connection.ConnectionId).Msg("Updating status: WAITING!!!!!!!!!!!!!!!!!!!!!")
+        log.Info().Str("connectionId", connection.ConnectionId).Msg("Updating status: WAITING")
         ctxUpdate, cancelUpdate := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
         defer cancelUpdate()
         _, err = m.appNetClient.UpdateConnection(ctxUpdate, &grpc_application_network_go.UpdateConnectionRequest{
@@ -1036,27 +1036,65 @@ func (m *Manager) manageConnectionsServiceRunning (instance *grpc_application_go
         if sendErr != nil {
             log.Error().Err(sendErr).Msg("error sending Join Message to the pod")
         }else{
-            ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-            defer cancel()
+
+            // getZTConnection, we need to know it the connection already exists
+            ctxGet, cancelGet := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+            defer cancelGet()
+            listConnections, err := m.appNetClient.ListZTNetworkConnection(ctxGet, &grpc_application_network_go.ZTNetworkId{
+                OrganizationId:instance.OrganizationId,
+                ZtNetworkId: connection.ZtNetworkId,
+            })
+            if err != nil {
+                log.Error().Err(err).Str("organizationId", instance.OrganizationId).
+                    Str("networkId", connection.ZtNetworkId).
+                    Msg("error getting zt-connection unauthorized message can not be sent")
+            }
+            found := false
+            for i:=0; i< len(listConnections.Connections) && !found; i++ {
+                conn := listConnections.Connections[i]
+                if conn.OrganizationId == service.OrganizationId && conn.ZtNetworkId == connection.ZtNetworkId && conn.AppInstanceId == service.ApplicationInstanceId && conn.ServiceId == service.ServiceId{
+                    found = true
+                }
+            }
+
             var side grpc_application_network_go.ConnectionSide
             if isInbound {
                 side = grpc_application_network_go.ConnectionSide_SIDE_INBOUND
             }else{
                 side = grpc_application_network_go.ConnectionSide_SIDE_OUTBOUND
             }
-            m.appNetClient.AddZTNetworkConnection(ctx, &grpc_application_network_go.ZTNetworkConnection{
-                OrganizationId: service.OrganizationId,
-                ZtNetworkId: connection.ZtNetworkId,
-                AppInstanceId: service.ApplicationInstanceId,
-                ServiceId: service.ServiceId,
-                ClusterId: service.ClusterId,
-                Side: side,
+            ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+            defer cancel()
+            if found {
+                _, err = m.appNetClient.UpdateZTNetworkConnection(ctx, &grpc_application_network_go.UpdateZTNetworkConnectionRequest{
+                    OrganizationId: service.OrganizationId,
+                    ZtNetworkId: connection.ZtNetworkId,
+                    AppInstanceId: service.ApplicationInstanceId,
+                    ServiceId: service.ServiceId,
+                    ClusterId: service.ClusterId,
+                    UpdateZtIp: true,
+                    ZtIp: "",
+                    UpdateZtMember: true,
+                    ZtMember: "",
+
+                })
+            }else{
+                _, err = m.appNetClient.AddZTNetworkConnection(ctx, &grpc_application_network_go.ZTNetworkConnection{
+                    OrganizationId: service.OrganizationId,
+                    ZtNetworkId: connection.ZtNetworkId,
+                    AppInstanceId: service.ApplicationInstanceId,
+                    ServiceId: service.ServiceId,
+                    ClusterId: service.ClusterId,
+                    Side: side,
             })
+            }
+            if err != nil {
+                log.Error().Err(err).Msg("Error updating ZtConnection")
+            }
         }
 
-
         // update Connection status -> WAITING
-        log.Info().Str("connectionId", connection.ConnectionId).Msg("Updating status: WAITING!!!!!!!!!!!!!!")
+        log.Info().Str("connectionId", connection.ConnectionId).Msg("Updating status: WAITING")
         ctxUpdate, cancelUpdate := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
         defer cancelUpdate()
         _, err := m.appNetClient.UpdateConnection(ctxUpdate, &grpc_application_network_go.UpdateConnectionRequest{
