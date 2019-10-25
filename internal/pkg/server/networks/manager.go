@@ -504,9 +504,9 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 				for i := 0; i < ApplicationManagerUpdateRetries && !sent; i++ {
 					client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
 					ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-					defer cancel()
 					log.Debug().Str("clusterId", outbound.ClusterId).Interface("request", newRoute).Msg("set route update")
 					_, err = client.SetServiceRoute(ctx, &newRoute)
+					cancel()
 					if err != nil {
 						log.Error().Err(err).Str("ClusterId", outbound.ClusterId).Str("AppInstanceId", outbound.AppInstanceId).
 							Str("ServiceId", outbound.ServiceId).Str("ztIp", request.ZtIp).
