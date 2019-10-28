@@ -282,6 +282,7 @@ func (m *Manager) UnauthorizeMember(unauthorizeMemberRequest *grpc_network_go.Di
 	return nil
 }
 
+// AuthorizeZTConnection message received from ZT-NALEJ to authorize the member in a ZTNetwork
 func (m *Manager) AuthorizeZTConnection(request *grpc_network_go.AuthorizeZTConnectionRequest) derrors.Error{
 
 	ctx, cancel := context.WithTimeout(context.Background(), NetworkQueryTimeout)
@@ -327,7 +328,7 @@ func (m *Manager) getFQDN(serviceName string, organizationId string, appInstance
 	return value
 }
 
-// send a message to update the route to the request pod (if there is an inbound with IP)
+// sendUpdateRoute sends a message to update the route to the request pod (if there is an inbound with IP)
 func (m *Manager) sendUpdateRoute(request *grpc_network_go.RegisterZTConnectionRequest, inbounds []*grpc_application_network_go.ZTNetworkConnection, allConnected bool) derrors.Error {
 
 	log.Debug().Interface("request", request).Interface("inbounds", inbounds).Msg("sendUpdateRoute")
@@ -366,13 +367,13 @@ func (m *Manager) sendUpdateRoute(request *grpc_network_go.RegisterZTConnectionR
 
 }
 
+// getServiceName returns the name of the service
 func (m *Manager) getServiceName (organizationId string, appInstanceId string, serviceId string) (string, derrors.Error){
-// (request *grpc_network_go.RegisterZTConnectionRequest) (string, derrors.Error){
 	ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
 	defer cancel()
 	instance, err := m.ApplicationClient.GetAppInstance(ctx, &grpc_application_go.AppInstanceId{
-		OrganizationId: organizationId, //	request.OrganizationId,
-		AppInstanceId:  appInstanceId,//	request.AppInstanceId,
+		OrganizationId: organizationId,
+		AppInstanceId:  appInstanceId,
 	})
 	if err != nil {
 		return "", conversions.ToDerror(err)
@@ -381,7 +382,7 @@ func (m *Manager) getServiceName (organizationId string, appInstanceId string, s
 	serviceName := ""
 	for _, group := range instance.Groups{
 		for _, service := range group.ServiceInstances {
-			if service.ServiceId == serviceId {//request.ServiceId{
+			if service.ServiceId == serviceId {
 				serviceName = service.Name
 			}
 		}
@@ -393,6 +394,7 @@ func (m *Manager) getServiceName (organizationId string, appInstanceId string, s
 	return serviceName, nil
 }
 
+// getServiceGroupId returns the serviceGroupId to which the service belongs
 func (m *Manager) getServiceGroupId(organizationID string, applicationId string, serviceID string) (string, derrors.Error){
 	ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
 	defer cancel()
@@ -419,7 +421,7 @@ func (m *Manager) getServiceGroupId(organizationID string, applicationId string,
 
 }
 
-// send a message to update the route to all outbound pod if the pod is registered (has IP)
+// sendUpdateRouteToOutbounds send a message to update the route to all outbound pods if the pod is registered (has IP)
 func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZTConnectionRequest, outbounds []*grpc_application_network_go.ZTNetworkConnection, allConnected bool) derrors.Error {
 
 	log.Debug().Interface("request", request).Interface("outbounds", outbounds).Msg("sendUpdateRouteToOutbounds")
@@ -498,13 +500,27 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 					return derrors.NewInternalError("impossible to get cluster connection", err)
 				}
 
-				client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
-				ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
-				log.Debug().Str("clusterId", outbound.ClusterId).Interface("request", newRoute).Msg("set route update")
-				_, err = client.SetServiceRoute(ctx, &newRoute)
-				cancel()
-				if err != nil {
-					log.Error().Err(err).Msg("there was an error setting a new route")
+				sent := false
+				for i := 0; i < ApplicationManagerUpdateRetries && !sent; i++ {
+					client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
+					ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+					log.Debug().Str("clusterId", outbound.ClusterId).Interface("request", newRoute).Msg("set route update")
+					_, err = client.SetServiceRoute(ctx, &newRoute)
+					cancel()
+					if err != nil {
+						log.Error().Err(err).Str("ClusterId", outbound.ClusterId).Str("AppInstanceId", outbound.AppInstanceId).
+							Str("ServiceId", outbound.ServiceId).Str("ztIp", request.ZtIp).
+							Msg("there was an error setting a new route-sending the route to the outbounds")
+						time.Sleep(ApplicationManagerTimeout)
+					} else {
+						sent = true
+					}
+
+				}
+				// if we can not send the message in ApplicationManagerUpdate retries -> an error must be sent
+				if !sent {
+					log.Error().Err(err).Str("ClusterId", outbound.ClusterId).Str("AppInstanceId", outbound.AppInstanceId).
+						Str("ServiceId", outbound.ServiceId).Str("ztIp", request.ZtIp).Msg("max retries sending the route to the outbounds")
 					return derrors.NewInternalError("there was an error setting a new route",err)
 				}
 			}
@@ -512,13 +528,14 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 	}
 
 	if allConnected {
-		m.UpdateConnectionStatus(conn, grpc_application_network_go.ConnectionStatus_ESTABLISHED)
+		m.updateConnectionStatus(conn, grpc_application_network_go.ConnectionStatus_ESTABLISHED)
 	}
 
 	return nil
 }
 
-func (m *Manager) UpdateConnectionStatus(connectionInstance *grpc_application_network_go.ConnectionInstance, newStatus grpc_application_network_go.ConnectionStatus) {
+// updateConnectionStatus updates the status of a connection
+func (m *Manager) updateConnectionStatus(connectionInstance *grpc_application_network_go.ConnectionInstance, newStatus grpc_application_network_go.ConnectionStatus) {
 	updateConnectionRequest := grpc_application_network_go.UpdateConnectionRequest{
 		OrganizationId:   connectionInstance.OrganizationId,
 		SourceInstanceId: connectionInstance.SourceInstanceId,
@@ -539,6 +556,7 @@ func (m *Manager) UpdateConnectionStatus(connectionInstance *grpc_application_ne
 	}
 }
 
+// RegisterZTConnection message received from ZT_NALEJ when getting Zero Tier address
 func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnectionRequest) derrors.Error {
 
 	// update conn helper
