@@ -503,7 +503,7 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 				sent := false
 				for i := 0; i < ApplicationManagerUpdateRetries && !sent; i++ {
 					client := grpc_app_cluster_api_go.NewDeploymentManagerClient(conn)
-					ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), ApplicationManagerJoinTimeout)
 					log.Debug().Str("clusterId", outbound.ClusterId).Interface("request", newRoute).Msg("set route update")
 					_, err = client.SetServiceRoute(ctx, &newRoute)
 					cancel()
@@ -521,7 +521,10 @@ func (m *Manager) sendUpdateRouteToOutbounds(request *grpc_network_go.RegisterZT
 				if !sent {
 					log.Error().Err(err).Str("ClusterId", outbound.ClusterId).Str("AppInstanceId", outbound.AppInstanceId).
 						Str("ServiceId", outbound.ServiceId).Str("ztIp", request.ZtIp).Msg("max retries sending the route to the outbounds")
-					return derrors.NewInternalError("there was an error setting a new route",err)
+					// I can not return an error, sometimes, when a pod is restarting, the message is sent to the
+					// terminating pod, and it returns an error.
+					// If I return and error -> I'll never updated the connection status
+					//return derrors.NewInternalError("there was an error setting a new route",err)
 				}
 			}
 		}
@@ -608,6 +611,7 @@ func (m *Manager) RegisterZTConnection(request *grpc_network_go.RegisterZTConnec
 			inboundList = append(inboundList, conn)
 		}
 		if conn.ZtIp == "" {
+			log.Debug().Interface("connection", conn).Msg("Connection has no IP!!!!!!!!!!!!!!")
 			allConnected = false
 		}
 	}
