@@ -124,6 +124,38 @@ func (m *Manager) DeleteNetwork(deleteNetworkRequest *grpc_network_go.DeleteNetw
 		return derrors.NewGenericError("Cannot delete ZeroTier network", err)
 	}
 
+	// get ZTMembers
+	list, err := m.ApplicationClient.ListAuthorizedZTNetworkMembers(context.Background(), &grpc_application_go.ListAuthorizedZtNetworkMemberRequest{
+		OrganizationId: deleteNetworkRequest.OrganizationId,
+		AppInstanceId: 	deleteNetworkRequest.AppInstanceId,
+		ZtNetworkId: 	ztNetwork.NetworkId,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("error getting zero tier members, unable to delete them")
+	}
+	// List returns a list with all the members, and remove removes all the members in a time call one time per ServiceGroupInstanceId, ServiceApplicationInstanceId and ZtNetworkId
+	removed := make (map[string]bool, 0)
+	for _, member := range list.Members {
+		_, found := removed[fmt.Sprintf("%s#%s", member.ServiceApplicationInstanceId, member.ServiceGroupInstanceId)]
+		if ! found {
+			_, err = m.ApplicationClient.RemoveAuthorizedZtNetworkMember(context.Background(), &grpc_application_go.RemoveAuthorizedZtNetworkMemberRequest{
+				OrganizationId:               member.OrganizationId,
+				AppInstanceId:                member.AppInstanceId,
+				ServiceGroupInstanceId:       member.ServiceGroupInstanceId,
+				ServiceApplicationInstanceId: member.ServiceApplicationInstanceId,
+				ZtNetworkId:                  member.NetworkId,
+			})
+			if err != nil {
+				log.Error().Str("organizationId", member.OrganizationId).Str("AppInstanceId", member.AppInstanceId).
+					Str("ServiceGroupInstanceId", member.ServiceGroupInstanceId).Str("ServiceApplicationInstanceId", member.ServiceApplicationInstanceId).
+					Str("ServiceApplicationInstanceId", member.ServiceApplicationInstanceId).
+					Err(err).Msg("error removing zero tier members")
+			}else{
+				removed[fmt.Sprintf("%s#%s", member.ServiceApplicationInstanceId, member.ServiceGroupInstanceId)] = true
+			}
+		}
+	}
+
 	// Delete the network entry
 	_, err = m.ApplicationClient.RemoveAppZtNetwork(context.Background(), &grpc_application_go.RemoveAppZtNetworkRequest{
 		OrganizationId: deleteNetworkRequest.OrganizationId,
