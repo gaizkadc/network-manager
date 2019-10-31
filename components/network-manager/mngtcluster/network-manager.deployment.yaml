@@ -45,15 +45,6 @@ spec:
               mountPath: /dev/net/tun
             - name: data-network-manager
               mountPath: /var/lib/zerotier-one
-            - name: zt-planet
-              mountPath: /zt/planet
-              readOnly: true
-            - name: zt-identity-public
-              mountPath: /zt/identity-public
-              readOnly: true
-            - name: zt-identity-secret
-              mountPath: /zt/identity-secret
-              readOnly: true
             - name: ca-certificate-volume
               readOnly: true
               mountPath: /nalej/ca-certificate
@@ -69,15 +60,6 @@ spec:
         - name: data-network-manager
           persistentVolumeClaim:
             claimName: data-network-manager
-        - name: zt-planet
-          secret:
-            secretName: zt-planet
-        - name: zt-identity-public
-          secret:
-            secretName: zt-identity-public
-        - name: zt-identity-secret
-          secret:
-            secretName: zt-identity-secret
         - name: ca-certificate-volume
           secret:
             secretName: ca-certificate

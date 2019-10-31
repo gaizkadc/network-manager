@@ -43,30 +43,6 @@ jobs:
       namespace: "__NPH_NAMESPACE"
       componentList: $(componentList)
       dockerRegistry: $(stagingDockerRegistry)
-    
-  - template: k8s/secrets/create.yaml@ci_templates
-    parameters:
-      name: zt-identity-public
-      namespace: "__NPH_NAMESPACE"
-      yamlPath: $(system.defaultWorkingDirectory)/dist/yaml/$(stagingDockerRegistry)/mngtcluster
-      yamlFile: network-manager.zt-identity-public.secret.yaml
-      contents: "{'test': 'test'}"
-
-  - template: k8s/secrets/create.yaml@ci_templates
-    parameters:
-      name: zt-identity-secret
-      namespace: "__NPH_NAMESPACE"
-      yamlPath: $(system.defaultWorkingDirectory)/dist/yaml/$(stagingDockerRegistry)/mngtcluster
-      yamlFile: network-manager.zt-identity-secret.secret.yaml
-      contents: "{'test': 'test'}"
-  
-  - template: k8s/secrets/create.yaml@ci_templates
-    parameters:
-      name: zt-planet
-      namespace: "__NPH_NAMESPACE"
-      yamlPath: $(system.defaultWorkingDirectory)/dist/yaml/$(stagingDockerRegistry)/mngtcluster
-      yamlFile: network-manager.zt-planet.secret.yaml
-      contents: "{'test': 'test'}"
 
   - template: k8s/secrets/create.yaml@ci_templates
     parameters:
