@@ -1,5 +1,18 @@
 /*
- * Copyright (C) 2018 Nalej - All Rights Reserved
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 package dns
@@ -42,7 +55,7 @@ func (h *Handler) AddDNSEntry(ctx context.Context, entry *grpc_network_go.AddDNS
 }
 
 func (h *Handler) DeleteDNSEntry(ctx context.Context, entry *grpc_network_go.DeleteDNSEntryRequest) (*grpc_common_go.Success, error) {
-	log.Debug().Interface("request",entry).Msg("delete dns entry")
+	log.Debug().Interface("request", entry).Msg("delete dns entry")
 
 	err := h.Manager.DeleteDNSEntry(entry)
 	if err != nil {
@@ -53,7 +66,7 @@ func (h *Handler) DeleteDNSEntry(ctx context.Context, entry *grpc_network_go.Del
 }
 
 func (h *Handler) ListEntries(ctx context.Context, organizationID *grpc_organization_go.OrganizationId) (*grpc_network_go.DNSEntryList, error) {
-	log.Debug().Interface("request",organizationID).Msg("list dns entries")
+	log.Debug().Interface("request", organizationID).Msg("list dns entries")
 
 	err := entities.ValidOrganizationId(organizationID)
 	if err != nil {
