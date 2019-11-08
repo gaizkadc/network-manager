@@ -105,10 +105,6 @@ More options are available on all commands. Run `-h` or `--help` at any point in
 
 Ignore this entry if it does not apply.
 
-## Known Issues
-
-Explain any relevant issues that may affect this repo.
-
 
 ## Contributing
 
