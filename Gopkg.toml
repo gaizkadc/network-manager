@@ -8,7 +8,7 @@
 
 [[constraint]]
     name="github.com/nalej/nalej-bus"
-    branch="master"
+    version="v0.4.0"
 
 [[constraint]]
     name="github.com/nalej/grpc-network-go"
@@ -28,7 +28,7 @@
 
 [[constraint]]
   name="github.com/nalej/grpc-deployment-manager-go"
-  version="=v0.0.62"
+  version="=v0.0.63"
 
 [[constraint]]
   name="github.com/nalej/grpc-infrastructure-go"
@@ -40,11 +40,11 @@
 
 [[constraint]]
   name="github.com/nalej/grpc-connectivity-manager-go"
-  version="=v0.0.2"
+  version="=v0.0.3"
 
 [[constraint]]
     name="github.com/nalej/derrors"
-    version="v2.0.0"
+    version="v2.1.0"
 
 [[constraint]]
     name="github.com/nalej/dhttp"
