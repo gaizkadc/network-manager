@@ -20,8 +20,11 @@ To launch the Network-Manager Server run:
 
 Detail any component that has to be installed to run this component.
 
-* Component1 (e.g.: system-model)
-* Component2 (e.g.: conductor)
+* dns-server-ui: Network manager accesses dns-server to manage DNS entries 
+* system-model: Network manager accesses it to ask, update, remove, etc. the entities related to the network
+* nalej-bus: Network manager sends and consumes messages from the bus. These messages are **applications events** to manage the 
+connections between applications and  **network operations** to manage the network
+
 
 ### Build and compile
 
