@@ -1,3 +1,20 @@
+/*
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package server
 
 import (
@@ -30,8 +47,8 @@ type Service struct {
 func NewService(config Config) *Service {
 	return &Service{
 		Configuration: config,
-		ConnHelper: utils.NewConnectionsHelper(config.UseTLS,config.ClientCertPath,config.CACertPath,config.SkipServerCertValidation),
-		Server: tools.NewGenericGRPCServer(uint32(config.Port)),
+		ConnHelper:    utils.NewConnectionsHelper(config.UseTLS, config.ClientCertPath, config.CACertPath, config.SkipServerCertValidation),
+		Server:        tools.NewGenericGRPCServer(uint32(config.Port)),
 	}
 }
 
@@ -101,8 +118,8 @@ func (s *Service) Launch() {
 		InboundServiceProxy: true, OutboundService: true, AddConnection: true, RemoveConnection: true,
 		AuthorizeZTConnection: true, RegisterZTConnecion: true})
 
-	networkOpsConsumer,err := ops.NewNetworkOpsConsumer(pulsarclient, "network-manager-network-ops", true, networkOpsConfig)
-	if err!=nil{
+	networkOpsConsumer, err := ops.NewNetworkOpsConsumer(pulsarclient, "network-manager-network-ops", true, networkOpsConfig)
+	if err != nil {
 		log.Panic().Err(err).Msg("impossible to initialize network ops manager")
 	}
 	networkOpsQueue := queue.NewNetworkOpsHandler(netManager, dnsManager, netAppManager, networkOpsConsumer)
@@ -121,7 +138,6 @@ func (s *Service) Launch() {
 	appEventsQueue := queue.NewAppEventsHandler(netAppManager, appEventsConsumer)
 	appEventsQueue.Run()
 	log.Info().Msg("initialize application events manager done")
-
 
 	// gRPC Service
 	grpcServer := grpc.NewServer()

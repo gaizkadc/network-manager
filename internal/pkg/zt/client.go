@@ -1,5 +1,18 @@
 /*
- * Copyright (C) 2018 Nalej - All Rights Reserved
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 package zt
@@ -55,7 +68,7 @@ func NewZTClient(url string, accessToken string) (*ZTClient, derrors.Error) {
 //     Error, if there is an internal error.
 // The entries marked [rw] can be set during creation. From those,
 // only "name" is required.
-func (ztc *ZTClient) Add(networkName string, organizationId string, IpRangeMin string, IpRangeMax string ) (*ZTNetwork, derrors.Error) {
+func (ztc *ZTClient) Add(networkName string, organizationId string, IpRangeMin string, IpRangeMax string) (*ZTNetwork, derrors.Error) {
 
 	ip := strings.Split(IpRangeMin, ".")
 	log.Debug().Str("networkName", networkName).Str("organizationID", organizationId).
@@ -83,31 +96,30 @@ func (ztc *ZTClient) Add(networkName string, organizationId string, IpRangeMin s
 	entity := &ZTNetwork{
 		Name: networkName,
 		IpAssignmentPools: []IpAssignmentPool{
-            {
-                IpRangeStart: IpRangeMin, //"192.168.0.1",
-                IpRangeEnd: IpRangeMax, //"192.168.15.254",
-            },
-            /*
-		    {
-		        IpRangeStart: "fd00:feed:feed:beef:0000:0000:0000:0000",
-		        IpRangeEnd: "fd00:feed:feed:beef:ffff:ffff:ffff:ffff",
-	        },
-            */
-        },
-		V4AssignMode: &V4AssignMode{
-			Zt:       true,
-		},
-        /*
-		V6AssignMode: &V6AssignMode{
-			Zt:       true,
-			Rfc4193:  true,
-			SixPlane: true,
-		},
-        */
-		Routes: []Route{
-		    {Target: fmt.Sprintf("192.168.%s.0/24", ip[2]),
+			{
+				IpRangeStart: IpRangeMin, //"192.168.0.1",
+				IpRangeEnd:   IpRangeMax, //"192.168.15.254",
 			},
-        },
+			/*
+					    {
+					        IpRangeStart: "fd00:feed:feed:beef:0000:0000:0000:0000",
+					        IpRangeEnd: "fd00:feed:feed:beef:ffff:ffff:ffff:ffff",
+				        },
+			*/
+		},
+		V4AssignMode: &V4AssignMode{
+			Zt: true,
+		},
+		/*
+			V6AssignMode: &V6AssignMode{
+				Zt:       true,
+				Rfc4193:  true,
+				SixPlane: true,
+			},
+		*/
+		Routes: []Route{
+			{Target: fmt.Sprintf("192.168.%s.0/24", ip[2])},
+		},
 	}
 
 	response := ztc.client.Post(path, entity, network)
@@ -229,7 +241,6 @@ func (ztc *ZTClient) Authorize(networkId string, memberId string) derrors.Error 
 
 	return nil
 }
-
 
 // Unauthorize a member to join a network
 //	params:
