@@ -33,7 +33,6 @@ spec:
             - "--sm=system-model.__NPH_NAMESPACE:8800"
             - "--zturl=http://localhost:9993"
             - "--queueAddress=broker.__NPH_NAMESPACE:6650"
-            - "--debug"
             - "--caCertPath=/nalej/ca-certificate/ca.crt"
             - "--clientCertPath=/nalej/tls-client-certificate/"
             - "--skipServerCertValidation=false"
