@@ -10,7 +10,6 @@
     "network-manager"
   ],
   "tools": [
-    "azure",
     "docker",
     "k8s"
   ]
