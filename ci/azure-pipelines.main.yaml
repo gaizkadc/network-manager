@@ -10,7 +10,7 @@ resources:
       type: github
       name: nalej/ci-templates
       endpoint: nalej
-      ref: refs/tags/v1.0.4
+      ref: refs/tags/v1.0.5
 
 stages:
 - stage: 'SlackStart'
@@ -50,8 +50,9 @@ stages:
     - template: steps/docker-main.yaml@ci_templates
 
 - stage: 'ComponentDeploy'
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-  dependsOn: 'ImageBuild'
+  #condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  #dependsOn: 'ImageBuild'
+  dependsOn: 'BinaryBuild'
   jobs:
   - job: 
     pool:
