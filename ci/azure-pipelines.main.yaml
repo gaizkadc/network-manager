@@ -67,6 +67,11 @@ stages:
         environment: "staging"
         version: edge
 
+    - template: k8s/statefulsets/claim_to_emptydirs.yaml@ci_templates
+      parameters:
+        yamlPath: $(system.defaultWorkingDirectory)/dist/yaml/staging/mngtcluster
+        yamlFile: network-manager.deployment.yaml
+
     - template: k8s/yaml/namespace.yaml@ci_templates
       parameters:
         namespace: $(namespace)
