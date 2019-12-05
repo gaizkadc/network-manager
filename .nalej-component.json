@@ -10,6 +10,9 @@
   "image_list": [
     "network-manager"
   ],
+  "component_list": [
+    "network-manager"
+  ],
   "tools": [
     "docker",
     "k8s"
